@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Local development with SQLite
+// For production, change provider to "postgresql" and use a real connection string.
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String   // Hashed password
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Club {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  category    String
+  description String
+  instagram   String?
+  discord     String?
+  events      Event[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  date        DateTime // Stored in UTC
+  description String?
+  clubId      String
+  club        Club     @relation(fields: [clubId], references: [id])
+  recurring   String?  // null, "weekly", "biweekly", "monthly"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Metrics {
+  id           String   @id @default(uuid())
+  activeUsers  Int      @default(0)
+  portalSignups Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}

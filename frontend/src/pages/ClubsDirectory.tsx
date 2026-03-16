@@ -1,0 +1,136 @@
+import { useState, useEffect } from 'react';
+import { Search, X } from 'lucide-react';
+
+interface Club {
+    id: string; name: string; category: string; description: string;
+    instagram?: string; discord?: string;
+}
+
+export const ClubsDirectory = () => {
+    const [clubs, setClubs] = useState<Club[]>([]);
+    const [search, setSearch] = useState('');
+    const [category, setCategory] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch('http://localhost:3001/api/clubs')
+            .then(r => r.json())
+            .then(data => { setClubs(data); setLoading(false); })
+            .catch(() => setLoading(false));
+    }, []);
+
+    const categories = Array.from(new Set(clubs.map(c => c.category)));
+    const filtered = clubs.filter(c => {
+        const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase());
+        return matchSearch && (!category || c.category === category);
+    });
+
+
+    return (
+        <div style={{ animation: 'fadeUp 0.4s ease both' }}>
+            <div style={{ marginBottom: '32px' }}>
+                <h1 style={{ fontSize: '2.2rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em' }}>
+                    Clubs Directory
+                </h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '6px' }}>
+                    Find your community at Burnaby Central.
+                </p>
+            </div>
+
+            {/* Search & Filters */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '28px', flexWrap: 'wrap', alignItems: 'center', animation: 'fadeUp 0.4s ease 0.1s both' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
+                    <input
+                        className="input"
+                        style={{ paddingLeft: '42px' }}
+                        placeholder="Search clubs..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                    />
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <button onClick={() => setCategory(null)} className="pill" style={{
+                        cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
+                        background: !category ? 'var(--black)' : 'var(--white)',
+                        color: !category ? '#fff' : 'var(--gray-700)',
+                        boxShadow: !category ? 'none' : '0 0 0 1.5px var(--gray-300)',
+                        transition: 'all 0.2s ease',
+                    }}>
+                        All
+                    </button>
+                    {categories.map(cat => (
+                        <button key={cat} onClick={() => setCategory(cat)} className="pill" style={{
+                            cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
+                            background: category === cat ? 'var(--black)' : 'var(--white)',
+                            color: category === cat ? '#fff' : 'var(--gray-700)',
+                            boxShadow: category === cat ? 'none' : '0 0 0 1.5px var(--gray-300)',
+                            transition: 'all 0.2s ease',
+                        }}>
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Grid */}
+            {loading ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} style={{ height: '240px', borderRadius: 'var(--radius-lg)', background: 'var(--gray-200)' }} />
+                    ))}
+                </div>
+            ) : filtered.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', animation: 'fadeUp 0.4s ease 0.15s both' }}>
+                    {filtered.map((club, idx) => (
+                        <div key={club.id} className="card card-hover" onClick={() => window.location.href = `/clubs/${club.id}`} style={{
+                            display: 'flex', flexDirection: 'column',
+                            animation: `fadeUp 0.4s ease ${0.1 + idx * 0.04}s both`, cursor: 'pointer'
+                        }}>
+                            <div style={{ padding: '24px 24px 16px', flex: 1 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, fontFamily: 'var(--font-display)', lineHeight: 1.3 }}>
+                                        {club.name}
+                                    </h3>
+                                    <span className="pill pill-dark" style={{ marginLeft: '10px', flexShrink: 0 }}>
+                                        {club.category}
+                                    </span>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                                    {club.description}
+                                </p>
+                            </div>
+                            <div style={{ padding: '0 24px 24px' }}>
+                                <button className="btn btn-outline" style={{ width: '100%', borderColor: 'transparent', background: 'var(--gray-100)' }}>
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                /* Empty State */
+                <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    padding: '80px 20px', textAlign: 'center', animation: 'fadeUp 0.4s ease both',
+                }}>
+                    <div style={{
+                        width: '80px', height: '80px', borderRadius: '50%', background: 'var(--gray-200)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
+                    }}>
+                        <Search size={32} style={{ color: 'var(--gray-400)' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '8px' }}>
+                        No clubs found
+                    </h3>
+                    <p style={{ color: 'var(--text-muted)', maxWidth: '360px', marginBottom: '24px' }}>
+                        No clubs match "{search}" in this category.
+                    </p>
+                    <button onClick={() => { setSearch(''); setCategory(null); }} className="btn btn-red">
+                        <X size={16} /> Clear Filters
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
