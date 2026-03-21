@@ -13,7 +13,7 @@ export const ClubsDirectory = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/clubs')
+        fetch(`${import.meta.env.VITE_API_URL}/api/clubs`)
             .then(r => r.json())
             .then(data => { setClubs(data); setLoading(false); })
             .catch(() => setLoading(false));

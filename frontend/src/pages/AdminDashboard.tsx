@@ -35,7 +35,7 @@ export const AdminDashboard = () => {
     const { toast } = useToast();
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/auth/verify', { credentials: 'include' })
+        fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify`, { credentials: 'include' })
             .then(r => { if (!r.ok) navigate('/admin'); })
             .catch(() => navigate('/admin'));
         loadClubs();
@@ -43,13 +43,13 @@ export const AdminDashboard = () => {
     }, [navigate]);
 
     const loadEvents = () => {
-        fetch('http://localhost:3001/api/events').then(r => r.json())
+        fetch(`${import.meta.env.VITE_API_URL}/api/events`).then(r => r.json())
             .then(data => setEvents(data))
             .catch(console.error);
     };
 
     const loadClubs = () => {
-        fetch('http://localhost:3001/api/clubs').then(r => r.json())
+        fetch(`${import.meta.env.VITE_API_URL}/api/clubs`).then(r => r.json())
             .then(data => {
                 setClubs(data);
                 if (data.length > 0 && !clubId) setClubId(data[0].id);
@@ -78,7 +78,7 @@ export const AdminDashboard = () => {
         setSubmitting(true);
         try {
             const dt = new Date(`${date}T${time}:00`);
-            const r = await fetch('http://localhost:3001/api/events', {
+            const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
                 body: JSON.stringify({ title, date: dt.toISOString(), description, clubId, recurring: recurring || null }),
             });
@@ -95,7 +95,7 @@ export const AdminDashboard = () => {
 
     const handleDeleteEvent = async (id: string) => {
         if (!window.confirm('Delete this event?')) return;
-        const r = await fetch(`http://localhost:3001/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
         if (r.ok) { toast('Event deleted'); loadEvents(); }
         else toast('Failed to delete', 'error');
     };
@@ -109,8 +109,8 @@ export const AdminDashboard = () => {
 
         try {
             const url = editingClub
-                ? `http://localhost:3001/api/clubs/${editingClub.id}`
-                : 'http://localhost:3001/api/clubs';
+                ? `${import.meta.env.VITE_API_URL}/api/clubs/${editingClub.id}`
+                : `${import.meta.env.VITE_API_URL}/api/clubs`;
             const r = await fetch(url, {
                 method: editingClub ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -130,14 +130,14 @@ export const AdminDashboard = () => {
 
     const handleDeleteClub = async (id: string) => {
         if (!window.confirm('Delete this club and all its events?')) return;
-        const r = await fetch(`http://localhost:3001/api/clubs/${id}`, { method: 'DELETE', credentials: 'include' });
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/clubs/${id}`, { method: 'DELETE', credentials: 'include' });
         if (r.ok) { toast('Club deleted'); loadClubs(); }
         else toast('Failed to delete', 'error');
     };
 
     const handleDeleteCategory = async (category: string) => {
         if (!window.confirm(`Delete category "${category}" AND all its clubs and events? This cannot be undone.`)) return;
-        const r = await fetch(`http://localhost:3001/api/categories/${encodeURIComponent(category)}`, { method: 'DELETE', credentials: 'include' });
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/categories/${encodeURIComponent(category)}`, { method: 'DELETE', credentials: 'include' });
         if (r.ok) {
             toast('Category deleted');
             loadClubs();
@@ -162,7 +162,7 @@ export const AdminDashboard = () => {
     };
 
     const handleLogout = async () => {
-        await fetch('http://localhost:3001/api/auth/logout', { method: 'POST', credentials: 'include' });
+        await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
         navigate('/admin');
     };
 

@@ -11,7 +11,7 @@ export const AdminPortal = () => {
 
     useEffect(() => {
         // Auto-redirect if already logged in
-        fetch('http://localhost:3001/api/auth/verify', { credentials: 'include' })
+        fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify`, { credentials: 'include' })
             .then(r => {
                 if (r.ok) navigate('/admin/dashboard');
             })
@@ -23,7 +23,7 @@ export const AdminPortal = () => {
         setLoading(true);
         setError('');
         try {
-            const res = await fetch('http://localhost:3001/api/auth/login', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 credentials: 'include', body: JSON.stringify({ username, password }),
             });

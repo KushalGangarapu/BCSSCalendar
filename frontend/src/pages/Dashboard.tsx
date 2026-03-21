@@ -39,17 +39,17 @@ export const Dashboard = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/metrics')
+        fetch(`${import.meta.env.VITE_API_URL}/api/metrics`)
             .then(r => r.json())
-            .then(data => { setMetrics(data); fetch('http://localhost:3001/api/metrics/visit', { method: 'POST' }); })
+            .then(data => { setMetrics(data); fetch(`${import.meta.env.VITE_API_URL}/api/metrics/visit`, { method: 'POST' }); })
             .catch(console.error);
 
-        fetch('http://localhost:3001/api/events')
+        fetch(`${import.meta.env.VITE_API_URL}/api/events`)
             .then(r => r.json())
             .then(data => setEvents(data.slice(0, 5)))
             .catch(console.error);
 
-        fetch('http://localhost:3001/api/clubs')
+        fetch(`${import.meta.env.VITE_API_URL}/api/clubs`)
             .then(r => r.json())
             .then(data => setClubs(data.slice(0, 3)))
             .catch(console.error);

@@ -11,7 +11,7 @@ export const ClubPage = () => {
 
     useEffect(() => {
         if (!params.id) return;
-        fetch(`http://localhost:3001/api/clubs/${params.id}`)
+        fetch(`${import.meta.env.VITE_API_URL}/api/clubs/${params.id}`)
             .then(res => res.json())
             .then(data => {
                 setClub(data);

@@ -11,7 +11,7 @@ export const EventPage = () => {
 
     useEffect(() => {
         if (!params.id) return;
-        fetch(`http://localhost:3001/api/events/${params.id}`)
+        fetch(`${import.meta.env.VITE_API_URL}/api/events/${params.id}`)
             .then(res => res.json())
             .then(data => {
                 setEvent(data);

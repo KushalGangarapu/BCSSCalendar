@@ -32,15 +32,15 @@ export const MasterCalendar = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/events').then(r => r.json()).then(setEvents).catch(console.error);
-        fetch('http://localhost:3001/api/categories').then(r => r.json()).then(setCategories).catch(console.error);
-        fetch('http://localhost:3001/api/auth/verify', { credentials: 'include' })
+        fetch(`${import.meta.env.VITE_API_URL}/api/events`).then(r => r.json()).then(setEvents).catch(console.error);
+        fetch(`${import.meta.env.VITE_API_URL}/api/categories`).then(r => r.json()).then(setCategories).catch(console.error);
+        fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify`, { credentials: 'include' })
             .then(r => setIsAdmin(r.ok)).catch(() => setIsAdmin(false));
     }, []);
 
     const handleDelete = async (id: string) => {
         if (!window.confirm('Delete this event?')) return;
-        const r = await fetch(`http://localhost:3001/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
         if (r.ok) setEvents(events.filter(e => e.id !== id));
     };
 
