@@ -41,7 +41,13 @@ export const Dashboard = () => {
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/metrics`)
             .then(r => r.json())
-            .then(data => { setMetrics(data); fetch(`${import.meta.env.VITE_API_URL}/api/metrics/visit`, { method: 'POST' }); })
+            .then(data => {
+                setMetrics(data);
+                if (!localStorage.getItem('bcss_has_visited')) {
+                    fetch(`${import.meta.env.VITE_API_URL}/api/metrics/visit`, { method: 'POST' });
+                    localStorage.setItem('bcss_has_visited', 'true');
+                }
+            })
             .catch(console.error);
 
         fetch(`${import.meta.env.VITE_API_URL}/api/events`)
@@ -93,7 +99,7 @@ export const Dashboard = () => {
 
             {/* Stat Cards — Page Visits, Upcoming Events, Number of Clubs */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
-                <StatCard icon={Eye} label="Page Visits" value={metrics.pageVisits} delay={0.15} />
+                <StatCard icon={Eye} label="Unique Visits" value={metrics.pageVisits} delay={0.15} />
                 <StatCard icon={Calendar} label="Upcoming Events" value={metrics.eventCount || events.length} delay={0.25} />
                 <StatCard icon={Users} label="Number of Clubs" value={metrics.clubCount || clubs.length} delay={0.35} />
             </div>
