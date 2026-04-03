@@ -28,47 +28,49 @@ export const EventPage = () => {
 
     return (
         <main className="main" style={{ animation: 'fadeUp 0.4s ease both' }}>
-            <button onClick={() => navigate('/calendar')} className="btn btn-ghost" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ArrowLeft size={18} /> Back to Calendar
-            </button>
+            <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+                <button onClick={() => navigate('/calendar')} className="btn btn-ghost" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: 0 }}>
+                    <ArrowLeft size={18} /> Back to Calendar
+                </button>
 
-            <div className="card" style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                    <span style={{
-                        background: 'rgba(239, 68, 68, 0.1)', color: 'var(--red)',
-                        padding: '6px 14px', borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
-                    }}>{event.club?.category || 'Event'}</span>
-                </div>
-
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '24px', lineHeight: 1.1 }}>
-                    {event.title}
-                </h1>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                        <Calendar size={20} className="text-red" />
-                        <span style={{ fontWeight: 500 }}>{format(parseISO(event.date), 'EEEE, MMMM do, yyyy')}</span>
+                <div className="card" style={{ padding: '40px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <span style={{
+                            background: 'rgba(239, 68, 68, 0.1)', color: 'var(--red)',
+                            padding: '6px 14px', borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+                        }}>{event.club?.category || 'Event'}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                        <Clock size={20} className="text-red" />
-                        <span style={{ fontWeight: 500 }}>{format(parseISO(event.date), 'h:mm a')}</span>
-                    </div>
-                    {event.club && (
+
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '24px', lineHeight: 1.1 }}>
+                        {event.title}
+                    </h1>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                            <Tag size={20} className="text-red" />
-                            <span style={{ fontWeight: 500 }}>Hosted by: <button onClick={() => navigate(`/clubs/${event.club.id}`)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font)' }}>{event.club.name}</button></span>
+                            <Calendar size={20} className="text-red" />
+                            <span style={{ fontWeight: 500 }}>{format(parseISO(event.date), 'EEEE, MMMM do, yyyy')}</span>
                         </div>
-                    )}
-                </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                            <Clock size={20} className="text-red" />
+                            <span style={{ fontWeight: 500 }}>{format(parseISO(event.date), 'h:mm a')}</span>
+                        </div>
+                        {event.club && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                                <Tag size={20} className="text-red" />
+                                <span style={{ fontWeight: 500 }}>Hosted by: <button onClick={() => navigate(`/clubs/${event.club.id}`)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font)' }}>{event.club.name}</button></span>
+                            </div>
+                        )}
+                    </div>
 
-                <div>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '16px' }}>About this Event</h3>
-                    {event.description ? (
-                        <p style={{ fontSize: '1.05rem', lineHeight: 1.7, color: 'var(--text-secondary)' }}>{event.description}</p>
-                    ) : (
-                        <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No additional details provided.</p>
-                    )}
+                    <div>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '16px' }}>About this Event</h3>
+                        {event.description ? (
+                            <p style={{ fontSize: '1.05rem', lineHeight: 1.7, color: 'var(--text-secondary)' }}>{event.description}</p>
+                        ) : (
+                            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No additional details provided.</p>
+                        )}
+                    </div>
                 </div>
             </div>
         </main>

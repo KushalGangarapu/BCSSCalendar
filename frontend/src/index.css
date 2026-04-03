@@ -459,12 +459,41 @@ textarea.input {
     grid-template-columns: 1fr !important;
   }
 
-  /* Club Card Responsiveness - Prevent cutoff */
-  .card[style*="padding: 20px 24px"] {
+  /* Make main dashboard shortcut buttons 90% width instead of 100% on mobile */
+  .main .btn-outline[style*="width: 100%"],
+  .main .btn-red[style*="width: 100%"] {
+    width: 90% !important;
+    margin: 16px auto 0 auto !important;
+    display: flex !important;
+  }
+
+  div[style*="grid-template-columns: 260px 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Master Calendar header stacking */
+  .main>div>div[style*="margin-bottom: 28px"] {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 16px !important;
-    padding: 16px !important;
+  }
+
+  /* Master Calendar internal scroll */
+  .main .card {
+    overflow-x: auto !important;
+  }
+
+  .main .card>div[style*="grid-template-columns: repeat(7, 1fr)"] {
+    min-width: 700px;
+  }
+
+  /* Club Card Responsiveness - Stack, Center, and proportional button */
+  .card[style*="padding: 20px 24px"] {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 16px !important;
+    padding: 20px 16px !important;
   }
 
   .card[style*="padding: 20px 24px"]>div:first-child {
@@ -472,8 +501,15 @@ textarea.input {
     width: 100%;
   }
 
+  /* Make sure internal text doesn't overflow */
+  .card[style*="padding: 20px 24px"]>div:first-child>div {
+    white-space: normal !important;
+    text-overflow: clip !important;
+  }
+
   .card[style*="padding: 20px 24px"] .btn {
-    width: 100%;
+    width: 90%;
+    margin: 0 auto;
   }
 }
 
