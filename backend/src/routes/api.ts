@@ -3,11 +3,12 @@ import { login, logout, verifySession } from '../controllers/authController';
 import { getEvents, createEvent, deleteEvent, getEventById } from '../controllers/eventsController';
 import { getClubs, createClub, updateClub, deleteClub, getCategories, deleteCategory, getMetrics, incrementVisits, incrementSignups, getClubById } from '../controllers/contentController';
 import { requireAuth } from '../middleware/authMiddleware';
+import { trackDevice, loginRateLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 
 // Auth routes
-router.post('/auth/login', login);
+router.post('/auth/login', trackDevice, loginRateLimiter, login);
 router.post('/auth/logout', logout);
 router.get('/auth/verify', verifySession);
 

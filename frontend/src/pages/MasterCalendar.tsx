@@ -88,7 +88,7 @@ export const MasterCalendar = () => {
                             padding: '3px 8px', fontSize: '0.7rem', fontWeight: 700,
                             cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                             fontFamily: 'var(--font-display)', letterSpacing: '0.01em',
-                            transition: 'transform 0.15s', ...getEventStyle(ev.club.name),
+                            transition: 'transform 0.15s', ...getEventStyle(ev.club?.name || 'School Event'),
                         }}
                             onMouseEnter={() => setHovered(ev)}
                             onMouseLeave={() => setHovered(null)}
@@ -113,7 +113,7 @@ export const MasterCalendar = () => {
                                     <h4 style={{ fontWeight: 700, fontFamily: 'var(--font-display)', fontSize: '1rem', marginBottom: '4px' }}>
                                         {ev.title}
                                     </h4>
-                                    <span className="pill pill-red" style={{ marginBottom: '10px', display: 'inline-flex' }}>{ev.club.name}</span>
+                                    <span className="pill pill-red" style={{ marginBottom: '10px', display: 'inline-flex' }}>{ev.club?.name || 'School Event'}</span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '8px' }}>
                                         <Clock size={13} />
                                         {format(parseISO(ev.date), 'EEEE, MMM do, h:mm a')}

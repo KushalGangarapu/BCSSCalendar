@@ -117,7 +117,6 @@ a:hover {
   flex: 1;
   margin-left: 260px;
   padding: 40px 48px;
-  min-height: 100vh;
 }
 
 /* ---- BUTTONS ---- */
@@ -510,6 +509,29 @@ textarea.input {
   .card[style*="padding: 20px 24px"] .btn {
     width: 90%;
     margin: 0 auto;
+  }
+
+  /* Detail Pages (Club & Event) Responsiveness */
+  .main .card[style*="padding: 40px"] {
+    padding: 24px !important;
+  }
+
+  /* Stack Club Page Social Links */
+  .main .card>div[style*="flex-wrap: wrap"][style*="borderBottom"] {
+    flex-direction: column !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+
+  .main .card>div[style*="flex-wrap: wrap"][style*="borderBottom"]>a {
+    justify-content: center !important;
+  }
+
+  /* Stack Club Page Upcoming Events list items */
+  .main .card>div>div>div[style*="justify-content: space-between"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
   }
 }
 

@@ -17,7 +17,6 @@ export const getClubById = async (req: Request, res: Response) => {
             where: { id },
             include: {
                 events: {
-                    where: { date: { gte: new Date() } },
                     orderBy: { date: 'asc' },
                 },
             },

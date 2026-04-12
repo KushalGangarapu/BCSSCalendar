@@ -210,7 +210,8 @@ export const AdminDashboard = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
                             <div><label className="label">Event Title</label><input required className="input" placeholder="e.g. Winter Social" value={title} onChange={e => setTitle(e.target.value)} /></div>
                             <div><label className="label">Hosting Club</label>
-                                <select required className="input" value={clubId} onChange={e => setClubId(e.target.value)}>
+                                <select className="input" value={clubId} onChange={e => setClubId(e.target.value)}>
+                                    <option value="">None (School Event)</option>
                                     {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
                             </div>
@@ -251,7 +252,7 @@ export const AdminDashboard = () => {
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)' }}>{event.title}</div>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {event.club?.name}
+                                                {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
                                             </div>
                                         </div>
                                         <button onClick={() => handleDeleteEvent(event.id)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)' }} title="Delete">

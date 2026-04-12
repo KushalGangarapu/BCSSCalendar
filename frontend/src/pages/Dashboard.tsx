@@ -43,9 +43,10 @@ export const Dashboard = () => {
             .then(r => r.json())
             .then(data => {
                 setMetrics(data);
-                if (!localStorage.getItem('bcss_has_visited')) {
+                const visitKey = 'bcss_has_visited_v2';
+                if (!localStorage.getItem(visitKey)) {
                     fetch(`${import.meta.env.VITE_API_URL}/api/metrics/visit`, { method: 'POST' });
-                    localStorage.setItem('bcss_has_visited', 'true');
+                    localStorage.setItem(visitKey, 'true');
                 }
             })
             .catch(console.error);
@@ -164,7 +165,7 @@ export const Dashboard = () => {
                                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                         }}>{event.title}</div>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })} · {event.club?.name || 'BCSS'}
+                                            {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
                                         </div>
                                     </div>
                                 </div>
