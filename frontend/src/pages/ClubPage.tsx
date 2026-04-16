@@ -75,7 +75,9 @@ export const ClubPage = () => {
 
                         {club.events && club.events.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {club.events.map((ev: any) => (
+                                {club.events.filter((ev: any, index: number, self: any[]) =>
+                                    index === self.findIndex((t) => t.title === ev.title)
+                                ).map((ev: any) => (
                                     <div key={ev.id} onClick={() => navigate(`/events/${ev.id}`)} style={{
                                         padding: '16px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)',
                                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',

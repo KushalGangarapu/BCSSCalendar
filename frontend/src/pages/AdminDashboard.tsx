@@ -93,10 +93,17 @@ export const AdminDashboard = () => {
         finally { setSubmitting(false); }
     };
 
-    const handleDeleteEvent = async (id: string) => {
-        if (!window.confirm('Delete this event?')) return;
-        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
-        if (r.ok) { toast('Event deleted'); loadEvents(); }
+    const handleDeleteEvent = async (event: any) => {
+        const confirmDelete = window.confirm('Are you sure you want to delete this event?');
+        if (!confirmDelete) return;
+
+        let allFuture = false;
+        if (event.recurring) {
+            allFuture = window.confirm('This is a recurring event series.\n\nClick OK to ALSO delete ALL FUTURE occurrences.\nClick Cancel to ONLY delete this specific date.');
+        }
+
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${event.id}?allFuture=${allFuture}`, { method: 'DELETE', credentials: 'include' });
+        if (r.ok) { toast(allFuture ? 'Event series deleted' : 'Event deleted'); loadEvents(); }
         else toast('Failed to delete', 'error');
     };
 
@@ -255,7 +262,7 @@ export const AdminDashboard = () => {
                                                 {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
                                             </div>
                                         </div>
-                                        <button onClick={() => handleDeleteEvent(event.id)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)' }} title="Delete">
+                                        <button onClick={() => handleDeleteEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)' }} title="Delete">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>

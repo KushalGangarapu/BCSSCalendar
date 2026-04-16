@@ -23,7 +23,7 @@ export const createEvent = async (req: Request, res: Response) => {
 
     try {
         // Basic validation
-        if (!title || !date || !clubId) {
+        if (!title || !date) {
             res.status(400).json({ error: 'Missing required fields' });
             return;
         }
@@ -49,7 +49,7 @@ export const createEvent = async (req: Request, res: Response) => {
                 title,
                 date: eventDate,
                 description,
-                clubId,
+                clubId: clubId || null,
                 recurring,
             });
         }
@@ -68,10 +68,31 @@ export const createEvent = async (req: Request, res: Response) => {
 
 export const deleteEvent = async (req: Request, res: Response) => {
     const { id } = req.params;
+    const { allFuture } = req.query;
+
     try {
-        await prisma.event.delete({
-            where: { id: id as string },
-        });
+        const event = await prisma.event.findUnique({ where: { id: id as string } });
+        if (!event) {
+            res.status(404).json({ error: 'Event not found' });
+            return;
+        }
+
+        if (allFuture === 'true' && event.recurring) {
+            await prisma.event.deleteMany({
+                where: {
+                    title: event.title,
+                    clubId: event.clubId,
+                    recurring: event.recurring,
+                    date: {
+                        gte: event.date,
+                    }
+                }
+            });
+        } else {
+            await prisma.event.delete({
+                where: { id: id as string },
+            });
+        }
         res.json({ message: 'Event deleted successfully' });
     } catch (error) {
         console.error('Error deleting event:', error);

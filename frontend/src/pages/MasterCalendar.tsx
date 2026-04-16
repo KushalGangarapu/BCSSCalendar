@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 interface Event {
     id: string; title: string; date: string; description?: string;
     club: { name: string; category: string };
+    recurring?: string | null;
 }
 
 // Color-coding for event types
@@ -38,10 +39,23 @@ export const MasterCalendar = () => {
             .then(r => setIsAdmin(r.ok)).catch(() => setIsAdmin(false));
     }, []);
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Delete this event?')) return;
-        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
-        if (r.ok) setEvents(events.filter(e => e.id !== id));
+    const handleDelete = async (event: Event) => {
+        const confirmDelete = window.confirm('Are you sure you want to delete this event?');
+        if (!confirmDelete) return;
+
+        let allFuture = false;
+        if (event.recurring) {
+            allFuture = window.confirm('This is a recurring event series.\n\nClick OK to ALSO delete ALL FUTURE occurrences.\nClick Cancel to ONLY delete this specific date.');
+        }
+
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${event.id}?allFuture=${allFuture}`, { method: 'DELETE', credentials: 'include' });
+        if (r.ok) {
+            if (allFuture) {
+                fetch(`${import.meta.env.VITE_API_URL}/api/events`).then(r => r.json()).then(setEvents).catch(console.error);
+            } else {
+                setEvents(events.filter(e => e.id !== event.id));
+            }
+        }
     };
 
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -128,7 +142,7 @@ export const MasterCalendar = () => {
 
                             {/* Admin Delete */}
                             {isAdmin && hovered?.id === ev.id && (
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(ev.id); }} style={{
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(ev); }} style={{
                                     position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
                                     background: 'var(--red-dark)', border: 'none', borderRadius: '4px',
                                     padding: '2px 4px', color: '#fff', cursor: 'pointer', display: 'flex',
