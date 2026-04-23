@@ -3,11 +3,13 @@ import {
     format, addMonths, subMonths, startOfMonth, endOfMonth,
     startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, parseISO
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Clock, Trash2, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { isEventLive } from '../utils/timeUtils';
 
 interface Event {
     id: string; title: string; date: string; description?: string;
+    clubId?: string;
     club: { name: string; category: string };
     recurring?: string | null;
 }
@@ -30,6 +32,8 @@ export const MasterCalendar = () => {
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
     const [hovered, setHovered] = useState<Event | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [followedOnly, setFollowedOnly] = useState(false);
+    const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -37,6 +41,9 @@ export const MasterCalendar = () => {
         fetch(`${import.meta.env.VITE_API_URL}/api/categories`).then(r => r.json()).then(setCategories).catch(console.error);
         fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify`, { credentials: 'include' })
             .then(r => setIsAdmin(r.ok)).catch(() => setIsAdmin(false));
+
+        const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
+        setFollowedClubIds(followed);
     }, []);
 
     const handleDelete = async (event: Event) => {
@@ -72,11 +79,12 @@ export const MasterCalendar = () => {
             const d = day; // capture
             const isThisMonth = isSameMonth(d, mStart);
             const isToday = isSameDay(d, new Date());
-            const dayEvents = events.filter(e => {
-                if (!isSameDay(parseISO(e.date), d)) return false;
-                if (selectedCategory !== 'All' && e.club.category !== selectedCategory) return false;
-                return true;
+            const filtered = events.filter(ev => {
+                const categoryMatch = selectedCategory === 'All' || ev.club?.category === selectedCategory;
+                const followMatch = !followedOnly || (ev.clubId && followedClubIds.includes(ev.clubId));
+                return categoryMatch && followMatch;
             });
+            const dateMatch = filtered.filter(ev => isSameDay(parseISO(ev.date), d));
 
             cells.push(
                 <div key={d.toString()} style={{
@@ -96,62 +104,67 @@ export const MasterCalendar = () => {
                             {format(d, 'd')}
                         </span>
                     </div>
-                    {dayEvents.map((ev, i) => (
-                        <div key={i} onClick={() => navigate(`/events/${ev.id}`)} style={{
-                            position: 'relative', marginBottom: '3px', borderRadius: '4px',
-                            padding: '3px 8px', fontSize: '0.7rem', fontWeight: 700,
-                            cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            fontFamily: 'var(--font-display)', letterSpacing: '0.01em',
-                            transition: 'transform 0.15s', ...getEventStyle(ev.club?.name || 'School Event'),
-                        }}
-                            onMouseEnter={() => setHovered(ev)}
-                            onMouseLeave={() => setHovered(null)}
-                        >
-                            {ev.title}
+                    {dateMatch.map((ev, i) => {
+                        const isLive = isEventLive(ev.date);
+                        return (
+                            <div key={i} onClick={() => navigate(`/events/${ev.id}`)} style={{
+                                position: 'relative', marginBottom: '3px', borderRadius: '4px',
+                                padding: '3px 8px', fontSize: '0.7rem', fontWeight: 700,
+                                cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                fontFamily: 'var(--font-display)', letterSpacing: '0.01em',
+                                transition: 'transform 0.15s', ...getEventStyle(ev.club?.name || 'School Event'),
+                            }}
+                                onMouseEnter={() => setHovered(ev)}
+                                onMouseLeave={() => setHovered(null)}
+                            >
+                                {isLive && <span className="glowing-dot" style={{ width: '6px', height: '6px', marginRight: '0' }} />}
+                                {ev.title}
 
-                            {/* Tooltip */}
-                            {hovered?.id === ev.id && (
-                                <div style={{
-                                    position: 'absolute', zIndex: 100, bottom: 'calc(100% + 8px)',
-                                    left: '50%', transform: 'translateX(-50%)', width: '260px',
-                                    background: '#fff', color: 'var(--text)', padding: '16px',
-                                    borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
-                                    border: '1px solid var(--border)', pointerEvents: 'none',
-                                    whiteSpace: 'normal', animation: 'fadeUp 0.2s ease both',
-                                }}>
+                                {/* Tooltip */}
+                                {hovered?.id === ev.id && (
                                     <div style={{
-                                        position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%) rotate(45deg)',
-                                        width: '12px', height: '12px', background: '#fff', border: '1px solid var(--border)',
-                                        borderTop: 'none', borderLeft: 'none',
-                                    }} />
-                                    <h4 style={{ fontWeight: 700, fontFamily: 'var(--font-display)', fontSize: '1rem', marginBottom: '4px' }}>
-                                        {ev.title}
-                                    </h4>
-                                    <span className="pill pill-red" style={{ marginBottom: '10px', display: 'inline-flex' }}>{ev.club?.name || 'School Event'}</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '8px' }}>
-                                        <Clock size={13} />
-                                        {format(parseISO(ev.date), 'EEEE, MMM do, h:mm a')}
+                                        position: 'absolute', zIndex: 100, bottom: 'calc(100% + 8px)',
+                                        left: '50%', transform: 'translateX(-50%)', width: '260px',
+                                        background: '#fff', color: 'var(--text)', padding: '16px',
+                                        borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+                                        border: '1px solid var(--border)', pointerEvents: 'none',
+                                        whiteSpace: 'normal', animation: 'fadeUp 0.2s ease both',
+                                    }}>
+                                        <div style={{
+                                            position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%) rotate(45deg)',
+                                            width: '12px', height: '12px', background: '#fff', border: '1px solid var(--border)',
+                                            borderTop: 'none', borderLeft: 'none',
+                                        }} />
+                                        <h4 style={{ fontWeight: 700, fontFamily: 'var(--font-display)', fontSize: '1rem', marginBottom: '4px' }}>
+                                            {ev.title}
+                                        </h4>
+                                        <span className="pill pill-red" style={{ marginBottom: '10px', display: 'inline-flex' }}>{ev.club?.name || 'School Event'}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '8px' }}>
+                                            <Clock size={13} />
+                                            {format(parseISO(ev.date), 'EEEE, MMM do, h:mm a')}
+                                        </div>
+                                        {ev.description && (
+                                            <p style={{ marginTop: '10px', fontSize: '0.83rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', paddingTop: '10px', lineHeight: 1.5 }}>
+                                                {ev.description}
+                                            </p>
+                                        )}
                                     </div>
-                                    {ev.description && (
-                                        <p style={{ marginTop: '10px', fontSize: '0.83rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', paddingTop: '10px', lineHeight: 1.5 }}>
-                                            {ev.description}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
+                                )}
 
-                            {/* Admin Delete */}
-                            {isAdmin && hovered?.id === ev.id && (
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(ev); }} style={{
-                                    position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
-                                    background: 'var(--red-dark)', border: 'none', borderRadius: '4px',
-                                    padding: '2px 4px', color: '#fff', cursor: 'pointer', display: 'flex',
-                                }}>
-                                    <Trash2 size={11} />
-                                </button>
-                            )}
-                        </div>
-                    ))}
+                                {/* Admin Delete */}
+                                {isAdmin && hovered?.id === ev.id && (
+                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(ev); }} style={{
+                                        position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
+                                        background: 'var(--red-dark)', border: 'none', borderRadius: '4px',
+                                        padding: '2px 4px', color: '#fff', cursor: 'pointer', display: 'flex',
+                                    }}>
+                                        <Trash2 size={11} />
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             );
             day = addDays(day, 1);
@@ -168,12 +181,27 @@ export const MasterCalendar = () => {
                         {format(month, 'MMMM yyyy')}
                     </h1>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                        onClick={() => setFollowedOnly(!followedOnly)}
+                        className="pill"
+                        style={{
+                            cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
+                            background: followedOnly ? 'var(--red)' : 'var(--white)',
+                            color: followedOnly ? '#fff' : 'var(--gray-700)',
+                            boxShadow: followedOnly ? 'none' : '0 0 0 1.5px var(--gray-300)',
+                            transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px'
+                        }}
+                    >
+                        <Heart size={14} fill={followedOnly ? 'currentColor' : 'none'} />
+                        Your Schedule
+                    </button>
+                    <div style={{ height: '24px', width: '1px', background: 'var(--border)' }} />
                     <select
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="input"
-                        style={{ height: '40px', minWidth: '150px', padding: '0 32px 0 16px', marginRight: '8px', fontSize: '0.9rem' }}
+                        className="pill"
+                        style={{ cursor: 'pointer', border: 'none', padding: '8px 12px', fontSize: '0.78rem', background: 'var(--white)', color: 'var(--gray-700)', boxShadow: '0 0 0 1.5px var(--gray-300)' }}
                     >
                         <option value="All">All Categories</option>
                         {categories.map(c => <option key={c} value={c}>{c}</option>)}

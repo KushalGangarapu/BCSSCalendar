@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, Calendar, ArrowLeft, ExternalLink, MessageSquare } from 'lucide-react';
+import { Users, Calendar, ArrowLeft, ExternalLink, MessageSquare, Heart } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 export const ClubPage = () => {
@@ -8,6 +8,25 @@ export const ClubPage = () => {
     const navigate = useNavigate();
     const [club, setClub] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isFollowed, setIsFollowed] = useState(false);
+
+    useEffect(() => {
+        const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
+        setIsFollowed(followed.includes(params.id));
+    }, [params.id]);
+
+    const toggleFollow = () => {
+        const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
+        let newFollowed;
+        if (followed.includes(params.id)) {
+            newFollowed = followed.filter((id: string) => id !== params.id);
+            setIsFollowed(false);
+        } else {
+            newFollowed = [...followed, params.id];
+            setIsFollowed(true);
+        }
+        localStorage.setItem('bcss_followed_clubs', JSON.stringify(newFollowed));
+    };
 
     useEffect(() => {
         if (!params.id) return;
@@ -33,6 +52,18 @@ export const ClubPage = () => {
                     <ArrowLeft size={18} /> Back to Directory
                 </button>
 
+                {/* Club Hero Image */}
+                {club.imageUrl && (
+                    <div style={{
+                        borderRadius: 'var(--radius-lg)', overflow: 'hidden', marginBottom: '24px',
+                        height: '280px', width: '100%',
+                    }}>
+                        <img src={club.imageUrl} alt={club.name} style={{
+                            width: '100%', height: '100%', objectFit: 'cover',
+                        }} />
+                    </div>
+                )}
+
                 <div className="card" style={{ padding: '40px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                         <span style={{
@@ -42,9 +73,19 @@ export const ClubPage = () => {
                         }}>{club.category}</span>
                     </div>
 
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '16px', lineHeight: 1.1 }}>
-                        {club.name}
-                    </h1>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1 }}>
+                            {club.name}
+                        </h1>
+                        <button
+                            onClick={toggleFollow}
+                            className={`btn ${isFollowed ? 'btn-red' : 'btn-outline'}`}
+                            style={{ gap: '8px', paddingInline: '20px' }}
+                        >
+                            <Heart size={18} fill={isFollowed ? 'currentColor' : 'none'} />
+                            {isFollowed ? 'Following' : 'Follow Club'}
+                        </button>
+                    </div>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid var(--border)' }}>
                         {club.instagram && (

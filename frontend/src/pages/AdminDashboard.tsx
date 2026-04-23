@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Calendar as CalIcon, LogOut, Trash2, Edit3, X, Users, Tag } from 'lucide-react';
+import { PlusCircle, Calendar as CalIcon, LogOut, Trash2, Edit3, X, Users, Tag, ImagePlus, Loader2, Crop } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../utils/cropImage';
 
-interface Club { id: string; name: string; category: string; description: string; instagram?: string; discord?: string; }
+interface Club { id: string; name: string; category: string; description: string; instagram?: string; discord?: string; imageUrl?: string; }
 
 type Tab = 'events' | 'clubs';
 
@@ -24,8 +26,16 @@ export const AdminDashboard = () => {
     const [clubDesc, setClubDesc] = useState('');
     const [clubInsta, setClubInsta] = useState('');
     const [clubDiscord, setClubDiscord] = useState('');
+    const [clubImageUrl, setClubImageUrl] = useState('');
+    const [uploading, setUploading] = useState(false);
     const [editingClub, setEditingClub] = useState<Club | null>(null);
     const [customCategory, setCustomCategory] = useState('');
+
+    // Cropper State
+    const [cropFileUrl, setCropFileUrl] = useState<string | null>(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
     const [clubs, setClubs] = useState<Club[]>([]);
     const [events, setEvents] = useState<any[]>([]);
@@ -112,7 +122,7 @@ export const AdminDashboard = () => {
         e.preventDefault();
         setSubmitting(true);
         const finalCategory = clubCategory === '__custom__' ? customCategory : clubCategory;
-        const body = { name: clubName, category: finalCategory, description: clubDesc, instagram: clubInsta || null, discord: clubDiscord || null };
+        const body = { name: clubName, category: finalCategory, description: clubDesc, instagram: clubInsta || null, discord: clubDiscord || null, imageUrl: clubImageUrl || null };
 
         try {
             const url = editingClub
@@ -160,12 +170,68 @@ export const AdminDashboard = () => {
         setClubDesc(club.description);
         setClubInsta(club.instagram || '');
         setClubDiscord(club.discord || '');
+        setClubImageUrl(club.imageUrl || '');
     };
 
     const resetClubForm = () => {
         setEditingClub(null);
         setClubName(''); setClubCategory(''); setClubDesc('');
-        setClubInsta(''); setClubDiscord(''); setCustomCategory('');
+        setClubInsta(''); setClubDiscord(''); setCustomCategory(''); setClubImageUrl('');
+        setCropFileUrl(null);
+    };
+
+    const handleFileSelect = (file: File) => {
+        const url = URL.createObjectURL(file);
+        setCropFileUrl(url);
+    };
+
+    const handleConfirmCrop = async () => {
+        if (!cropFileUrl || !croppedAreaPixels) return;
+
+        try {
+            setUploading(true);
+            const croppedFile = await getCroppedImg(cropFileUrl, croppedAreaPixels);
+            if (!croppedFile) throw new Error('Failed to crop image');
+
+            // Cleanup the blob url
+            URL.revokeObjectURL(cropFileUrl);
+            setCropFileUrl(null);
+
+            await handleImageUpload(croppedFile);
+        } catch (e) {
+            toast('Failed to crop image', 'error');
+            setUploading(false);
+        }
+    };
+
+    const handleImageUpload = async (file: File) => {
+        setUploading(true);
+        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+        console.log('Cloudinary upload →', { cloudName, uploadPreset, fileName: file.name });
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', uploadPreset);
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+                method: 'POST', body: formData,
+            });
+            const data = await res.json();
+            console.log('Cloudinary response →', data);
+            if (data.secure_url) {
+                setClubImageUrl(data.secure_url);
+                toast('Image uploaded!');
+            } else {
+                console.error('Cloudinary error:', data.error?.message || data);
+                toast(`Upload failed: ${data.error?.message || 'Unknown error'}`, 'error');
+            }
+        } catch (err) {
+            console.error('Upload exception:', err);
+            toast('Upload error', 'error');
+        } finally {
+            setUploading(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -313,6 +379,45 @@ export const AdminDashboard = () => {
                                 <div><label className="label">Instagram (optional)</label><input className="input" placeholder="https://..." value={clubInsta} onChange={e => setClubInsta(e.target.value)} /></div>
                                 <div><label className="label">Discord (optional)</label><input className="input" placeholder="https://..." value={clubDiscord} onChange={e => setClubDiscord(e.target.value)} /></div>
                             </div>
+
+                            {/* Image Upload */}
+                            <div>
+                                <label className="label">Club Photo (optional)</label>
+                                {clubImageUrl ? (
+                                    <div style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginTop: '8px' }}>
+                                        <img src={clubImageUrl} alt="Club" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }} />
+                                        <button type="button" onClick={() => setClubImageUrl('')} style={{
+                                            position: 'absolute', top: '8px', right: '8px',
+                                            background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+                                            width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: 'pointer', color: '#fff',
+                                        }}>
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label style={{
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                        border: '2px dashed var(--border)', borderRadius: 'var(--radius-md)',
+                                        padding: '24px', cursor: 'pointer', marginTop: '8px',
+                                        transition: 'all 0.2s ease', background: 'var(--gray-50)',
+                                    }}
+                                        onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--red)'; }}
+                                        onDragLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                                        onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border)'; const f = e.dataTransfer.files[0]; if (f) handleFileSelect(f); }}
+                                    >
+                                        {uploading ? (
+                                            <Loader2 size={24} style={{ color: 'var(--red)', animation: 'spin 1s linear infinite' }} />
+                                        ) : (
+                                            <>
+                                                <ImagePlus size={24} style={{ color: 'var(--gray-400)', marginBottom: '8px' }} />
+                                                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Drop image or click to upload</span>
+                                            </>
+                                        )}
+                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
+                                    </label>
+                                )}
+                            </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '4px' }}>
                                 {editingClub && <button type="button" onClick={resetClubForm} className="btn btn-ghost" style={{ fontSize: '0.87rem' }}>Cancel</button>}
                                 <button type="submit" disabled={submitting} className="btn btn-red" style={{ paddingInline: '28px' }}>
@@ -321,6 +426,56 @@ export const AdminDashboard = () => {
                             </div>
                         </form>
                     </div>
+
+                    {/* Crop Modal */}
+                    {cropFileUrl && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.8)', zIndex: 1000,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
+                        }}>
+                            <div className="card" style={{ width: '100%', maxWidth: '600px', padding: '24px', background: '#fff' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                    <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Crop size={20} className="text-red" /> Crop Photo
+                                    </h3>
+                                    <button onClick={() => { URL.revokeObjectURL(cropFileUrl); setCropFileUrl(null); }} className="btn btn-ghost" style={{ padding: '8px' }}>
+                                        <X size={20} />
+                                    </button>
+                                </div>
+
+                                <div style={{ position: 'relative', width: '100%', height: '400px', background: '#333', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                                    <Cropper
+                                        image={cropFileUrl}
+                                        crop={crop}
+                                        zoom={zoom}
+                                        aspect={21 / 9}
+                                        onCropChange={setCrop}
+                                        onZoomChange={setZoom}
+                                        onCropComplete={(_, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
+                                    />
+                                </div>
+
+                                <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    <label style={{ fontSize: '0.9rem', fontWeight: 600 }}>Zoom</label>
+                                    <input
+                                        type="range"
+                                        value={zoom}
+                                        min={1} max={3} step={0.1}
+                                        onChange={(e) => setZoom(Number(e.target.value))}
+                                        style={{ flex: 1, accentColor: 'var(--red)' }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                                    <button onClick={() => { URL.revokeObjectURL(cropFileUrl); setCropFileUrl(null); }} className="btn btn-ghost">Cancel</button>
+                                    <button onClick={handleConfirmCrop} disabled={uploading} className="btn btn-red" style={{ gap: '8px' }}>
+                                        {uploading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : 'Confirm & Upload'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Content Lists */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>

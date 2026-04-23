@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Club {
     id: string; name: string; category: string; description: string;
-    instagram?: string; discord?: string;
+    instagram?: string; discord?: string; imageUrl?: string;
 }
 
 export const ClubsDirectory = () => {
@@ -11,12 +12,17 @@ export const ClubsDirectory = () => {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/clubs`)
             .then(r => r.json())
             .then(data => { setClubs(data); setLoading(false); })
             .catch(() => setLoading(false));
+
+        const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
+        setFollowedClubIds(followed);
     }, []);
 
     const categories = Array.from(new Set(clubs.map(c => c.category)));
@@ -83,18 +89,39 @@ export const ClubsDirectory = () => {
             ) : filtered.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', animation: 'fadeUp 0.4s ease 0.15s both' }}>
                     {filtered.map((club, idx) => (
-                        <div key={club.id} className="card card-hover" onClick={() => window.location.href = `/clubs/${club.id}`} style={{
+                        <div key={club.id} className="card card-hover" onClick={() => navigate(`/clubs/${club.id}`)} style={{
                             display: 'flex', flexDirection: 'column',
-                            animation: `fadeUp 0.4s ease ${0.1 + idx * 0.04}s both`, cursor: 'pointer'
+                            animation: `fadeUp 0.4s ease ${0.1 + idx * 0.04}s both`, cursor: 'pointer', overflow: 'hidden'
                         }}>
-                            <div style={{ padding: '24px 24px 16px', flex: 1 }}>
+                            {/* Card Thumbnail */}
+                            <div style={{ height: '140px', overflow: 'hidden', flexShrink: 0 }}>
+                                {club.imageUrl ? (
+                                    <img src={club.imageUrl} alt={club.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <div style={{
+                                        width: '100%', height: '100%',
+                                        background: 'linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                        <span style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--gray-300)' }}>
+                                            {club.name.charAt(0)}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ padding: '20px 24px 16px', flex: 1 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                                     <h3 style={{ fontSize: '1.15rem', fontWeight: 700, fontFamily: 'var(--font-display)', lineHeight: 1.3 }}>
                                         {club.name}
                                     </h3>
-                                    <span className="pill pill-dark" style={{ marginLeft: '10px', flexShrink: 0 }}>
-                                        {club.category}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {followedClubIds.includes(club.id) && (
+                                            <Heart size={16} fill="var(--red)" color="var(--red)" />
+                                        )}
+                                        <span className="pill pill-dark" style={{ flexShrink: 0 }}>
+                                            {club.category}
+                                        </span>
+                                    </div>
                                 </div>
                                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
                                     {club.description}

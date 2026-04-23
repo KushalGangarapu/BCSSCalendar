@@ -33,12 +33,12 @@ export const getClubById = async (req: Request, res: Response) => {
 
 export const createClub = async (req: Request, res: Response) => {
     try {
-        const { name, category, description, instagram, discord } = req.body;
+        const { name, category, description, instagram, discord, imageUrl } = req.body;
         if (!name || !category || !description) {
             return res.status(400).json({ error: 'Name, category, and description are required' });
         }
         const club = await prisma.club.create({
-            data: { name, category, description, instagram, discord },
+            data: { name, category, description, instagram, discord, imageUrl: imageUrl || null },
         });
         res.status(201).json(club);
     } catch (error: any) {
@@ -52,7 +52,7 @@ export const createClub = async (req: Request, res: Response) => {
 export const updateClub = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
-        const { name, category, description, instagram, discord } = req.body;
+        const { name, category, description, instagram, discord, imageUrl } = req.body;
         const club = await prisma.club.update({
             where: { id },
             data: {
@@ -61,6 +61,7 @@ export const updateClub = async (req: Request, res: Response) => {
                 description: description as string,
                 instagram: (instagram as string) || null,
                 discord: (discord as string) || null,
+                imageUrl: (imageUrl as string) || null,
             },
         });
         res.json(club);

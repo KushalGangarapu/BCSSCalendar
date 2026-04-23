@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Eye, Calendar, Users, ArrowRight } from 'lucide-react';
+import { Eye, Calendar, Users, ArrowRight, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { isEventLive } from '../utils/timeUtils';
 
 interface StatCardProps {
     icon: any;
@@ -36,6 +37,8 @@ export const Dashboard = () => {
     const [metrics, setMetrics] = useState({ pageVisits: 0, clubCount: 0, eventCount: 0 });
     const [events, setEvents] = useState<any[]>([]);
     const [clubs, setClubs] = useState<any[]>([]);
+    const [followedOnly, setFollowedOnly] = useState(false);
+    const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -53,14 +56,23 @@ export const Dashboard = () => {
 
         fetch(`${import.meta.env.VITE_API_URL}/api/events`)
             .then(r => r.json())
-            .then(data => setEvents(data.slice(0, 5)))
+            .then(setEvents)
             .catch(console.error);
 
         fetch(`${import.meta.env.VITE_API_URL}/api/clubs`)
             .then(r => r.json())
             .then(data => setClubs(data.slice(0, 3)))
             .catch(console.error);
+
+        const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
+        setFollowedClubIds(followed);
     }, []);
+
+    const filteredEvents = followedOnly
+        ? events.filter(e => followedClubIds.includes(e.clubId))
+        : events;
+
+    const displayEvents = filteredEvents.slice(0, 5);
 
     return (
         <div>
@@ -140,9 +152,22 @@ export const Dashboard = () => {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)' }}>Upcoming Events</h2>
+                        <button
+                            onClick={() => setFollowedOnly(!followedOnly)}
+                            className="btn btn-ghost"
+                            style={{
+                                fontSize: '0.75rem', padding: '6px 12px', gap: '6px',
+                                background: followedOnly ? 'rgba(239,68,68,0.1)' : 'transparent',
+                                color: followedOnly ? 'var(--red)' : 'var(--text-muted)'
+                            }}
+                        >
+                            <Heart size={14} fill={followedOnly ? 'currentColor' : 'none'} />
+                            Your Schedule
+                        </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                        {events.length > 0 ? events.map((event, idx) => {
+                        {displayEvents.length > 0 ? displayEvents.map((event, idx) => {
+                            const isLive = isEventLive(event.date);
                             const d = new Date(event.date);
                             const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
                             const day = d.getDate();
@@ -163,7 +188,12 @@ export const Dashboard = () => {
                                         <div style={{
                                             fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)',
                                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                        }}>{event.title}</div>
+                                            display: 'flex', alignItems: 'center', gap: '8px'
+                                        }}>
+                                            {isLive && <span className="glowing-dot" />}
+                                            {event.title}
+                                            {isLive && <span style={{ fontSize: '0.65rem', color: 'var(--red)', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>LIVE</span>}
+                                        </div>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                             {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
                                         </div>
