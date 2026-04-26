@@ -1,21 +1,28 @@
 import { useState, useEffect } from 'react';
 import {
-    format, addMonths, subMonths, startOfMonth, endOfMonth,
-    startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, parseISO
+    format, addMonths, subMonths, addDays
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Heart, List, Map, Calendar as CalIcon, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { isEventLive } from '../utils/timeUtils';
+import { MonthView } from '../components/calendar/MonthView';
+import { WeekView } from '../components/calendar/WeekView';
+import { DayView } from '../components/calendar/DayView';
+import { AgendaView } from '../components/calendar/AgendaView';
+import { EventDetailModal } from '../components/calendar/EventDetailModal';
 
 interface Event {
     id: string; title: string; date: string; description?: string;
     clubId?: string;
-    club: { name: string; category: string };
+    club?: { name: string; category: string };
     recurring?: string | null;
+    tags?: string[];
 }
 
 // Color-coding for event types
-const getEventStyle = (clubName: string): React.CSSProperties => {
+const getEventStyle = (clubName: string, categoryColor?: string | null): React.CSSProperties => {
+    if (categoryColor) {
+        return { background: categoryColor, color: '#fff' };
+    }
     const hash = Array.from(clubName).reduce((h, c) => c.charCodeAt(0) + ((h << 5) - h), 0);
     const styles: React.CSSProperties[] = [
         { background: 'var(--red)', color: '#fff' },
@@ -26,11 +33,13 @@ const getEventStyle = (clubName: string): React.CSSProperties => {
 };
 
 export const MasterCalendar = () => {
-    const [month, setMonth] = useState(new Date());
+    const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
+    const [month, setMonth] = useState(new Date()); // acts as the base reference date
     const [events, setEvents] = useState<Event[]>([]);
-    const [categories, setCategories] = useState<string[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<string>('All');
+    const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [hovered, setHovered] = useState<Event | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [followedOnly, setFollowedOnly] = useState(false);
     const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
@@ -65,187 +74,144 @@ export const MasterCalendar = () => {
         }
     };
 
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const mStart = startOfMonth(month);
+    // Top level data filtering based on user selections
+    const displayEvents = events.filter(ev => {
+        let categoryMatch = false;
 
-    // Build calendar rows
-    const buildCells = () => {
-        const start = startOfWeek(mStart);
-        const end = endOfWeek(endOfMonth(mStart));
-        const cells: React.ReactElement[] = [];
-        let day = start;
-
-        while (day <= end) {
-            const d = day; // capture
-            const isThisMonth = isSameMonth(d, mStart);
-            const isToday = isSameDay(d, new Date());
-            const filtered = events.filter(ev => {
-                const categoryMatch = selectedCategory === 'All' || ev.club?.category === selectedCategory;
-                const followMatch = !followedOnly || (ev.clubId && followedClubIds.includes(ev.clubId));
-                return categoryMatch && followMatch;
-            });
-            const dateMatch = filtered.filter(ev => isSameDay(parseISO(ev.date), d));
-
-            cells.push(
-                <div key={d.toString()} style={{
-                    minHeight: '110px', padding: '6px 8px',
-                    borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
-                    background: isThisMonth ? '#fff' : 'var(--gray-50)',
-                    transition: 'background 0.15s ease',
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
-                        <span style={{
-                            width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            borderRadius: '50%', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'var(--font-display)',
-                            ...(isToday
-                                ? { background: 'var(--red)', color: '#fff' }
-                                : { color: isThisMonth ? 'var(--gray-800)' : 'var(--gray-400)' }),
-                        }}>
-                            {format(d, 'd')}
-                        </span>
-                    </div>
-                    {dateMatch.map((ev, i) => {
-                        const isLive = isEventLive(ev.date);
-                        return (
-                            <div key={i} onClick={() => navigate(`/events/${ev.id}`)} style={{
-                                position: 'relative', marginBottom: '3px', borderRadius: '4px',
-                                padding: '3px 8px', fontSize: '0.7rem', fontWeight: 700,
-                                cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                fontFamily: 'var(--font-display)', letterSpacing: '0.01em',
-                                transition: 'transform 0.15s', ...getEventStyle(ev.club?.name || 'School Event'),
-                            }}
-                                onMouseEnter={() => setHovered(ev)}
-                                onMouseLeave={() => setHovered(null)}
-                            >
-                                {isLive && <span className="glowing-dot" style={{ width: '6px', height: '6px', marginRight: '0' }} />}
-                                {ev.title}
-
-                                {/* Tooltip */}
-                                {hovered?.id === ev.id && (
-                                    <div style={{
-                                        position: 'absolute', zIndex: 100, bottom: 'calc(100% + 8px)',
-                                        left: '50%', transform: 'translateX(-50%)', width: '260px',
-                                        background: '#fff', color: 'var(--text)', padding: '16px',
-                                        borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
-                                        border: '1px solid var(--border)', pointerEvents: 'none',
-                                        whiteSpace: 'normal', animation: 'fadeUp 0.2s ease both',
-                                    }}>
-                                        <div style={{
-                                            position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%) rotate(45deg)',
-                                            width: '12px', height: '12px', background: '#fff', border: '1px solid var(--border)',
-                                            borderTop: 'none', borderLeft: 'none',
-                                        }} />
-                                        <h4 style={{ fontWeight: 700, fontFamily: 'var(--font-display)', fontSize: '1rem', marginBottom: '4px' }}>
-                                            {ev.title}
-                                        </h4>
-                                        <span className="pill pill-red" style={{ marginBottom: '10px', display: 'inline-flex' }}>{ev.club?.name || 'School Event'}</span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '8px' }}>
-                                            <Clock size={13} />
-                                            {format(parseISO(ev.date), 'EEEE, MMM do, h:mm a')}
-                                        </div>
-                                        {ev.description && (
-                                            <p style={{ marginTop: '10px', fontSize: '0.83rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', paddingTop: '10px', lineHeight: 1.5 }}>
-                                                {ev.description}
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Admin Delete */}
-                                {isAdmin && hovered?.id === ev.id && (
-                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(ev); }} style={{
-                                        position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
-                                        background: 'var(--red-dark)', border: 'none', borderRadius: '4px',
-                                        padding: '2px 4px', color: '#fff', cursor: 'pointer', display: 'flex',
-                                    }}>
-                                        <Trash2 size={11} />
-                                    </button>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-            day = addDays(day, 1);
+        if (selectedCategories.length === 0) {
+            categoryMatch = true;
+        } else {
+            // Check if ANY of the selected categories match the event's tags or club category
+            const hasMatchingTag = ev.tags && ev.tags.some(tag => selectedCategories.includes(tag));
+            const hasMatchingClubCategory = ev.club?.category && selectedCategories.includes(ev.club.category);
+            categoryMatch = Boolean(hasMatchingTag || hasMatchingClubCategory);
         }
-        return cells;
+
+        const followMatch = !followedOnly || (ev.clubId && followedClubIds.includes(ev.clubId));
+        return categoryMatch && followMatch;
+    });
+
+    const resolveEventStyle = (ev: Event) => {
+        // If event has multiple tags, try to find a color for the first one that exists in the categories array
+        let primaryColor = null;
+        if (ev.tags && ev.tags.length > 0) {
+            for (const tag of ev.tags) {
+                const matchedCategory = categories.find(c => c.name === tag);
+                if (matchedCategory) {
+                    primaryColor = matchedCategory.color;
+                    break;
+                }
+            }
+        }
+
+        // Fallback to club category color, then finally to the hashed getEventStyle
+        if (!primaryColor) {
+            primaryColor = categories.find(c => c.name === ev.club?.category)?.color || null;
+        }
+
+        return getEventStyle(ev.club?.name || 'School Event', primaryColor);
+    };
+
+    const toggleCategory = (catName: string) => {
+        if (selectedCategories.includes(catName)) {
+            setSelectedCategories(selectedCategories.filter(c => c !== catName));
+        } else {
+            setSelectedCategories([...selectedCategories, catName]);
+        }
     };
 
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                    <h1 style={{ fontSize: '2.2rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em' }}>
-                        {format(month, 'MMMM yyyy')}
+                    <h1 style={{ fontSize: '2.4rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                        {view === 'agenda' ? 'Agenda' : format(month, 'MMMM yyyy')}
                     </h1>
-                </div>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <button
-                        onClick={() => setFollowedOnly(!followedOnly)}
-                        className="pill"
-                        style={{
-                            cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
-                            background: followedOnly ? 'var(--red)' : 'var(--white)',
-                            color: followedOnly ? '#fff' : 'var(--gray-700)',
-                            boxShadow: followedOnly ? 'none' : '0 0 0 1.5px var(--gray-300)',
-                            transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px'
-                        }}
-                    >
-                        <Heart size={14} fill={followedOnly ? 'currentColor' : 'none'} />
-                        Your Schedule
-                    </button>
-                    <div style={{ height: '24px', width: '1px', background: 'var(--border)' }} />
-                    <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="pill"
-                        style={{ cursor: 'pointer', border: 'none', padding: '8px 12px', fontSize: '0.78rem', background: 'var(--white)', color: 'var(--gray-700)', boxShadow: '0 0 0 1.5px var(--gray-300)' }}
-                    >
-                        <option value="All">All Categories</option>
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-
-                    {isAdmin && (
-                        <button onClick={() => navigate('/admin/dashboard')} className="btn btn-red" style={{ marginRight: '8px', height: '40px' }}>
-                            <Plus size={16} /> Add Event
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={() => setFollowedOnly(!followedOnly)}
+                            className="pill"
+                            style={{
+                                cursor: 'pointer', border: 'none', padding: '6px 14px', fontSize: '0.75rem',
+                                background: followedOnly ? 'var(--red)' : 'var(--white)',
+                                color: followedOnly ? '#fff' : 'var(--gray-700)',
+                                boxShadow: followedOnly ? 'none' : '0 0 0 1px var(--gray-300)',
+                                transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px'
+                            }}
+                        >
+                            <Heart size={14} fill={followedOnly ? 'currentColor' : 'none'} />
+                            Your Followed Clubs
                         </button>
-                    )}
-                    <button onClick={() => setMonth(subMonths(month, 1))} className="btn btn-ghost" style={{
-                        width: '40px', height: '40px', borderRadius: '50%', border: '1px solid var(--border)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: 'var(--text)',
-                    }}>
-                        <ChevronLeft size={20} />
-                    </button>
-                    <button onClick={() => setMonth(addMonths(month, 1))} className="btn btn-ghost" style={{
-                        width: '40px', height: '40px', borderRadius: '50%', border: '1px solid var(--border)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: 'var(--text)',
-                    }}>
-                        <ChevronRight size={20} />
-                    </button>
+                        <div style={{ width: '1px', background: 'var(--gray-300)', margin: '0 4px' }} />
+                        {categories.map(cat => (
+                            <button
+                                key={cat.name}
+                                onClick={() => toggleCategory(cat.name)}
+                                className="pill"
+                                style={{
+                                    cursor: 'pointer', border: 'none', padding: '6px 14px', fontSize: '0.75rem',
+                                    background: selectedCategories.includes(cat.name) ? cat.color : 'var(--white)',
+                                    color: selectedCategories.includes(cat.name) ? '#fff' : 'var(--gray-700)',
+                                    boxShadow: selectedCategories.includes(cat.name) ? 'none' : '0 0 0 1px var(--gray-300)',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                {cat.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--white)', padding: '6px', borderRadius: 'var(--radius-pill)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                        <button onClick={() => setView('month')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'month' ? 'var(--gray-100)' : 'transparent', color: view === 'month' ? 'var(--red)' : 'var(--text-muted)' }} title="Month View"><LayoutGrid size={18} /></button>
+                        <button onClick={() => setView('week')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'week' ? 'var(--gray-100)' : 'transparent', color: view === 'week' ? 'var(--red)' : 'var(--text-muted)' }} title="Week View"><CalIcon size={18} /></button>
+                        <button onClick={() => setView('day')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'day' ? 'var(--gray-100)' : 'transparent', color: view === 'day' ? 'var(--red)' : 'var(--text-muted)' }} title="Day View"><Map size={18} /></button>
+                        <button onClick={() => setView('agenda')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'agenda' ? 'var(--gray-100)' : 'transparent', color: view === 'agenda' ? 'var(--red)' : 'var(--text-muted)' }} title="Agenda View"><List size={18} /></button>
+                    </div>
+
+                    <div style={{ height: '24px', width: '1px', background: 'var(--border)' }} />
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        {isAdmin && (
+                            <button onClick={() => navigate('/admin/dashboard')} className="btn btn-red" style={{ height: '36px', padding: '0 16px', gap: '6px' }}>
+                                <Plus size={16} /> <span style={{ display: 'none' }}>Add Event</span>
+                            </button>
+                        )}
+                        <button onClick={() => setMonth(view === 'month' || view === 'agenda' ? subMonths(month, 1) : addDays(month, view === 'week' ? -7 : -1))} className="btn btn-ghost" style={{
+                            width: '36px', height: '36px', borderRadius: '50%', border: '1px solid var(--border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: 'var(--text)',
+                        }}>
+                            <ChevronLeft size={20} />
+                        </button>
+                        <button onClick={() => setMonth(new Date())} className="btn btn-outline" style={{ height: '36px', padding: '0 16px', fontSize: '0.85rem' }}>
+                            Today
+                        </button>
+                        <button onClick={() => setMonth(view === 'month' || view === 'agenda' ? addMonths(month, 1) : addDays(month, view === 'week' ? 7 : 1))} className="btn btn-ghost" style={{
+                            width: '36px', height: '36px', borderRadius: '50%', border: '1px solid var(--border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: 'var(--text)',
+                        }}>
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="card" style={{ overflow: 'hidden', animation: 'fadeUp 0.4s ease 0.1s both' }}>
-                {/* Day headers */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)' }}>
-                    {days.map(d => (
-                        <div key={d} style={{
-                            textAlign: 'center', padding: '12px 0', fontSize: '0.72rem',
-                            fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-                            color: 'var(--text-muted)', fontFamily: 'var(--font-display)',
-                        }}>
-                            {d}
-                        </div>
-                    ))}
-                </div>
-                {/* Cells */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
-                    {buildCells()}
-                </div>
+            {/* Calendar Views */}
+            <div style={{ minHeight: '500px' }}>
+                {view === 'month' && <MonthView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
+                {view === 'week' && <WeekView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
+                {view === 'day' && <DayView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
+                {view === 'agenda' && <AgendaView events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
             </div>
+
+            {/* Event Details Modal */}
+            <EventDetailModal
+                event={selectedEvent}
+                onClose={() => setSelectedEvent(null)}
+                categories={categories}
+                categoryColor={selectedEvent ? categories.find(c => c.name === selectedEvent.club?.category)?.color : undefined}
+            />
         </div>
     );
 };

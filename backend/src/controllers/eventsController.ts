@@ -19,7 +19,7 @@ export const getEvents = async (req: Request, res: Response) => {
 };
 
 export const createEvent = async (req: Request, res: Response) => {
-    const { title, date, description, clubId, recurring } = req.body;
+    const { title, date, description, clubId, recurring, tags } = req.body;
 
     try {
         // Basic validation
@@ -51,6 +51,7 @@ export const createEvent = async (req: Request, res: Response) => {
                 description,
                 clubId: clubId || null,
                 recurring,
+                tags: tags || [],
             });
         }
 

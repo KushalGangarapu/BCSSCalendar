@@ -19,6 +19,7 @@ export const AdminDashboard = () => {
     const [description, setDescription] = useState('');
     const [clubId, setClubId] = useState('');
     const [recurring, setRecurring] = useState('');
+    const [eventTags, setEventTags] = useState<string[]>([]);
 
     // Club form state
     const [clubName, setClubName] = useState('');
@@ -39,7 +40,7 @@ export const AdminDashboard = () => {
 
     const [clubs, setClubs] = useState<Club[]>([]);
     const [events, setEvents] = useState<any[]>([]);
-    const [categories, setCategories] = useState<string[]>([]);
+    const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -63,9 +64,11 @@ export const AdminDashboard = () => {
             .then(data => {
                 setClubs(data);
                 if (data.length > 0 && !clubId) setClubId(data[0].id);
-                const cats = [...new Set(data.map((c: Club) => c.category))] as string[];
-                setCategories(cats.sort());
             })
+            .catch(console.error);
+
+        fetch(`${import.meta.env.VITE_API_URL}/api/categories`).then(r => r.json())
+            .then(data => setCategories(data))
             .catch(console.error);
     };
 
@@ -90,12 +93,13 @@ export const AdminDashboard = () => {
             const dt = new Date(`${date}T${time}:00`);
             const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ title, date: dt.toISOString(), description, clubId, recurring: recurring || null }),
+                body: JSON.stringify({ title, date: dt.toISOString(), description, clubId, recurring: recurring || null, tags: eventTags }),
             });
             if (r.ok) {
                 toast('Event published!');
                 setTitle('');
                 setDescription('');
+                setEventTags([]);
                 loadEvents();
             }
             else { const d = await r.json(); toast(d.error || 'Failed', 'error'); }
@@ -160,6 +164,21 @@ export const AdminDashboard = () => {
             loadClubs();
         } else {
             toast('Failed to delete', 'error');
+        }
+    };
+
+    const handleUpdateCategoryColor = async (categoryName: string, color: string) => {
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/categories/${encodeURIComponent(categoryName)}/color`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ color })
+        });
+        if (r.ok) {
+            toast('Category color updated');
+            loadClubs();
+        } else {
+            toast('Failed to update color', 'error');
         }
     };
 
@@ -247,6 +266,14 @@ export const AdminDashboard = () => {
         color: active ? '#fff' : 'var(--text-muted)',
     });
 
+    const toggleEventTag = (tagName: string) => {
+        if (eventTags.includes(tagName)) {
+            setEventTags(eventTags.filter(t => t !== tagName));
+        } else {
+            setEventTags([...eventTags, tagName]);
+        }
+    };
+
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
             {/* Header */}
@@ -305,6 +332,28 @@ export const AdminDashboard = () => {
                                 </select>
                             </div>
                         </div>
+                        <div>
+                            <label className="label">Event Tags (Optional)</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                                {categories.length === 0 && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No categories available. Add some in the Clubs tab.</span>}
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat.name} type="button"
+                                        onClick={() => toggleEventTag(cat.name)}
+                                        className="pill"
+                                        style={{
+                                            padding: '6px 14px', fontSize: '0.8rem', border: 'none', cursor: 'pointer',
+                                            background: eventTags.includes(cat.name) ? cat.color : 'var(--white)',
+                                            color: eventTags.includes(cat.name) ? '#fff' : 'var(--gray-700)',
+                                            boxShadow: eventTags.includes(cat.name) ? 'none' : '0 0 0 1px var(--gray-300)',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         <div><label className="label">Description (Optional)</label><textarea className="input" rows={3} style={{ resize: 'none' }} placeholder="Details..." value={description} onChange={e => setDescription(e.target.value)} /></div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '4px' }}>
                             <button type="button" onClick={() => { setTitle(''); setDescription(''); }} className="btn btn-ghost" style={{ fontSize: '0.87rem' }}>Cancel</button>
@@ -323,7 +372,14 @@ export const AdminDashboard = () => {
                                 return (
                                     <div key={event.id || idx} className="card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)' }}>{event.title}</div>
+                                            <div style={{ fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {event.title}
+                                                {event.tags && event.tags.length > 0 && (
+                                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                                        {event.tags.map((t: string) => <span key={t} style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'var(--gray-200)', borderRadius: '4px' }}>{t}</span>)}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                                                 {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
                                             </div>
@@ -364,7 +420,7 @@ export const AdminDashboard = () => {
                                 <label className="label">Category</label>
                                 <select required className="input" value={clubCategory} onChange={e => setClubCategory(e.target.value)}>
                                     <option value="">Select category...</option>
-                                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                    {categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                                     <option value="__custom__">+ New Category</option>
                                 </select>
                             </div>
@@ -524,9 +580,22 @@ export const AdminDashboard = () => {
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                 {categories.map(cat => (
-                                    <div key={cat} className="card" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: 'var(--gray-100)', border: 'none' }}>
-                                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{cat}</span>
-                                        <button onClick={() => handleDeleteCategory(cat)} className="btn btn-ghost" style={{ padding: '2px', color: 'var(--red)', minHeight: 0, height: 'auto' }} title={`Delete ${cat} and all its clubs`}>
+                                    <div key={cat.name} className="card" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: 'var(--gray-100)', border: 'none' }}>
+                                        <div style={{ position: 'relative', width: '20px', height: '20px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                            <input
+                                                type="color"
+                                                defaultValue={cat.color}
+                                                onBlur={(e) => {
+                                                    if (e.target.value !== cat.color) {
+                                                        handleUpdateCategoryColor(cat.name, e.target.value);
+                                                    }
+                                                }}
+                                                style={{ position: 'absolute', top: '-10px', left: '-10px', width: '40px', height: '40px', cursor: 'pointer', border: 'none', padding: 0 }}
+                                                title="Change Color"
+                                            />
+                                        </div>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{cat.name}</span>
+                                        <button onClick={() => handleDeleteCategory(cat.name)} className="btn btn-ghost" style={{ padding: '2px', color: 'var(--red)', minHeight: 0, height: 'auto' }} title={`Delete ${cat.name} and all its clubs`}>
                                             <X size={14} />
                                         </button>
                                     </div>

@@ -94,7 +94,7 @@ export const ClubsDirectory = () => {
                             animation: `fadeUp 0.4s ease ${0.1 + idx * 0.04}s both`, cursor: 'pointer', overflow: 'hidden'
                         }}>
                             {/* Card Thumbnail */}
-                            <div style={{ height: '140px', overflow: 'hidden', flexShrink: 0 }}>
+                            <div style={{ aspectRatio: '21 / 9', overflow: 'hidden', flexShrink: 0 }}>
                                 {club.imageUrl ? (
                                     <img src={club.imageUrl} alt={club.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (

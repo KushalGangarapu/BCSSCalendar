@@ -37,6 +37,14 @@ export const createClub = async (req: Request, res: Response) => {
         if (!name || !category || !description) {
             return res.status(400).json({ error: 'Name, category, and description are required' });
         }
+
+        // Ensure category exists
+        await prisma.category.upsert({
+            where: { name: category },
+            update: {},
+            create: { name: category }
+        });
+
         const club = await prisma.club.create({
             data: { name, category, description, instagram, discord, imageUrl: imageUrl || null },
         });
@@ -53,6 +61,16 @@ export const updateClub = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
         const { name, category, description, instagram, discord, imageUrl } = req.body;
+
+        if (category) {
+            // Ensure category exists
+            await prisma.category.upsert({
+                where: { name: category },
+                update: {},
+                create: { name: category }
+            });
+        }
+
         const club = await prisma.club.update({
             where: { id },
             data: {
@@ -86,8 +104,7 @@ export const deleteClub = async (req: Request, res: Response) => {
 
 export const getCategories = async (req: Request, res: Response) => {
     try {
-        const clubs = await prisma.club.findMany({ select: { category: true } });
-        const categories = [...new Set(clubs.map(c => c.category))].sort();
+        const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
         res.json(categories);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch categories' });
@@ -102,10 +119,31 @@ export const deleteCategory = async (req: Request, res: Response) => {
 
         await prisma.event.deleteMany({ where: { clubId: { in: clubIds } } });
         await prisma.club.deleteMany({ where: { category: categoryName } });
+        await prisma.category.delete({ where: { name: categoryName } });
 
         res.json({ message: 'Category deleted' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete category' });
+    }
+};
+
+export const updateCategoryColor = async (req: Request, res: Response) => {
+    try {
+        const categoryName = decodeURIComponent(req.params.name as string);
+        const { color } = req.body;
+
+        if (!color) {
+            return res.status(400).json({ error: 'Color is required' });
+        }
+
+        const category = await prisma.category.update({
+            where: { name: categoryName },
+            data: { color }
+        });
+
+        res.json(category);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update category color' });
     }
 };
 

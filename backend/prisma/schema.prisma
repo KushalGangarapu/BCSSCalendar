@@ -20,6 +20,13 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+model Category {
+  name      String   @id
+  color     String   @default("var(--red)")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Club {
   id          String   @id @default(uuid())
   name        String   @unique
@@ -41,6 +48,7 @@ model Event {
   clubId      String
   club        Club     @relation(fields: [clubId], references: [id])
   recurring   String?  // null, "weekly", "biweekly", "monthly"
+  tags        String[] @default([])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

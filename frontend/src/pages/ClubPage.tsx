@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Users, Calendar, ArrowLeft, ExternalLink, MessageSquare, Heart } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { Helmet } from 'react-helmet-async';
 
 export const ClubPage = () => {
     const params = useParams();
@@ -47,6 +48,16 @@ export const ClubPage = () => {
 
     return (
         <main className="main" style={{ animation: 'fadeUp 0.4s ease both' }}>
+            <Helmet>
+                <title>{club.name} | Wildcat Calendar</title>
+                <meta property="og:title" content={`${club.name} | BCSS`} />
+                <meta property="og:description" content={club.description} />
+                {club.imageUrl && <meta property="og:image" content={club.imageUrl} />}
+                <meta name="twitter:title" content={`${club.name} | BCSS`} />
+                <meta name="twitter:description" content={club.description} />
+                {club.imageUrl && <meta name="twitter:image" content={club.imageUrl} />}
+            </Helmet>
+
             <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
                 <button onClick={() => navigate('/clubs')} className="btn btn-ghost" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: 0 }}>
                     <ArrowLeft size={18} /> Back to Directory
@@ -56,7 +67,7 @@ export const ClubPage = () => {
                 {club.imageUrl && (
                     <div style={{
                         borderRadius: 'var(--radius-lg)', overflow: 'hidden', marginBottom: '24px',
-                        height: '280px', width: '100%',
+                        aspectRatio: '21 / 9', width: '100%',
                     }}>
                         <img src={club.imageUrl} alt={club.name} style={{
                             width: '100%', height: '100%', objectFit: 'cover',
