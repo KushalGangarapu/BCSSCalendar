@@ -4,6 +4,7 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus, Heart, List, Map, Calendar as CalIcon, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { MonthView } from '../components/calendar/MonthView';
 import { WeekView } from '../components/calendar/WeekView';
 import { DayView } from '../components/calendar/DayView';
@@ -122,6 +123,9 @@ export const MasterCalendar = () => {
 
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
+            <Helmet>
+                <title>Calendar | Wildcat Calendar</title>
+            </Helmet>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>

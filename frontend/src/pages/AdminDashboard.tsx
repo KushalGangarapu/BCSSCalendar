@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Calendar as CalIcon, LogOut, Trash2, Edit3, X, Users, Tag, ImagePlus, Loader2, Crop } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import { Helmet } from 'react-helmet-async';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
 
@@ -276,6 +277,9 @@ export const AdminDashboard = () => {
 
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
+            <Helmet>
+                <title>Admin Portal | Wildcat Calendar</title>
+            </Helmet>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, Tag } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { Helmet } from 'react-helmet-async';
 
 export const EventPage = () => {
     const params = useParams();
@@ -28,6 +29,9 @@ export const EventPage = () => {
 
     return (
         <main className="main" style={{ animation: 'fadeUp 0.4s ease both' }}>
+            <Helmet>
+                <title>{event.title} | Wildcat Calendar</title>
+            </Helmet>
             <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
                 <button onClick={() => navigate('/calendar')} className="btn btn-ghost" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: 0 }}>
                     <ArrowLeft size={18} /> Back to Calendar

@@ -5,11 +5,11 @@ const prisma = new PrismaClient({});
 
 async function main() {
     // 1. Create default admin user
-    const hashedPassword = await bcrypt.hash('burnabycentral', 10);
+    const hashedPassword = await bcrypt.hash('adminpassword123', 10);
 
     const admin = await prisma.user.upsert({
         where: { username: 'admin' },
-        update: {},
+        update: { password: hashedPassword },
         create: {
             username: 'admin',
             password: hashedPassword,

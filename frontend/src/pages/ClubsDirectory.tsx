@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, X, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 
 interface Club {
     id: string; name: string; category: string; description: string;
@@ -34,6 +35,9 @@ export const ClubsDirectory = () => {
 
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
+            <Helmet>
+                <title>Directory | Wildcat Calendar</title>
+            </Helmet>
             <div style={{ marginBottom: '32px' }}>
                 <h1 style={{ fontSize: '2.2rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em' }}>
                     Clubs Directory

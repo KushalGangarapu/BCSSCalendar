@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, Calendar, Users, ArrowRight, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { isEventLive } from '../utils/timeUtils';
 
 interface StatCardProps {
@@ -76,6 +77,9 @@ export const Dashboard = () => {
 
     return (
         <div>
+            <Helmet>
+                <title>Dashboard | Wildcat Calendar</title>
+            </Helmet>
             {/* Hero Section — Dark with red accents */}
             <div style={{
                 background: 'linear-gradient(135deg, var(--black) 0%, #1a1a2e 50%, var(--black) 100%)',
