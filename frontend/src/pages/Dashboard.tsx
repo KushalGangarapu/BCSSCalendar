@@ -27,15 +27,23 @@ const StatCard = ({ icon: Icon, label, value, delay }: StatCardProps) => (
             <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'var(--font-display)' }}>
                 {label}
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--red)', fontFamily: 'var(--font-display)', lineHeight: 1.1, marginTop: '2px' }}>
-                {value.toLocaleString()}
-            </div>
+            {value === null || value === undefined ? (
+                <div style={{
+                    width: '60px', height: '32px', marginTop: '2px', borderRadius: '4px',
+                    background: 'var(--gray-200)',
+                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                }} />
+            ) : (
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--red)', fontFamily: 'var(--font-display)', lineHeight: 1.1, marginTop: '2px' }}>
+                    {value.toLocaleString()}
+                </div>
+            )}
         </div>
     </div>
 );
 
 export const Dashboard = () => {
-    const [metrics, setMetrics] = useState({ pageVisits: 0, clubCount: 0, eventCount: 0 });
+    const [metrics, setMetrics] = useState<{ pageVisits?: number; clubCount?: number; eventCount?: number }>({});
     const [events, setEvents] = useState<any[]>([]);
     const [clubs, setClubs] = useState<any[]>([]);
     const [followedOnly, setFollowedOnly] = useState(false);
@@ -116,9 +124,9 @@ export const Dashboard = () => {
 
             {/* Stat Cards — Page Visits, Upcoming Events, Number of Clubs */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
-                <StatCard icon={Eye} label="Unique Visits" value={metrics.pageVisits} delay={0.15} />
-                <StatCard icon={Calendar} label="Upcoming Events" value={metrics.eventCount || events.length} delay={0.25} />
-                <StatCard icon={Users} label="Number of Clubs" value={metrics.clubCount || clubs.length} delay={0.35} />
+                <StatCard icon={Eye} label="Unique Visits" value={metrics.pageVisits!} delay={0.15} />
+                <StatCard icon={Calendar} label="Upcoming Events" value={metrics.eventCount!} delay={0.25} />
+                <StatCard icon={Users} label="Number of Clubs" value={metrics.clubCount!} delay={0.35} />
             </div>
 
             {/* Split Layout */}
@@ -130,16 +138,16 @@ export const Dashboard = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {clubs.map(club => (
-                            <div key={club.id} className="card" onClick={() => navigate(`/clubs/${club.id}`)} style={{ padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                                <div style={{ flex: 1, minWidth: 0, marginRight: '16px' }}>
-                                    <div style={{ fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font-display)' }}>{club.name}</div>
+                            <div key={club.id} className="card card-hover" onClick={() => navigate(`/clubs/${club.id}`)} style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', gap: '16px' }}>
+                                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font-display)', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{club.name}</div>
                                     <div style={{
-                                        fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px',
+                                        fontSize: '0.82rem', color: 'var(--text-muted)',
                                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                    }}>{club.description}</div>
+                                    }}>{club.category}</div>
                                 </div>
-                                <button className="btn btn-red" style={{ padding: '8px 20px', fontSize: '0.8rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    Join
+                                <button className="btn btn-red" style={{ padding: '6px 16px', fontSize: '0.8rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                    View
                                 </button>
                             </div>
                         ))}

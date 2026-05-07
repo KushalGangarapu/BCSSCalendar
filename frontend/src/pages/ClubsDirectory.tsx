@@ -38,6 +38,24 @@ export const ClubsDirectory = () => {
             <Helmet>
                 <title>Directory | Wildcat Calendar</title>
             </Helmet>
+            <style>
+                {`
+                .clubs-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 20px;
+                }
+                @media (max-width: 1024px) {
+                    .clubs-grid { grid-template-columns: repeat(3, 1fr); }
+                }
+                @media (max-width: 768px) {
+                    .clubs-grid { grid-template-columns: repeat(2, 1fr); }
+                }
+                @media (max-width: 480px) {
+                    .clubs-grid { grid-template-columns: 1fr; }
+                }
+                `}
+            </style>
             <div style={{ marginBottom: '32px' }}>
                 <h1 style={{ fontSize: '2.2rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em' }}>
                     Clubs Directory
@@ -48,12 +66,12 @@ export const ClubsDirectory = () => {
             </div>
 
             {/* Search & Filters */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '28px', flexWrap: 'wrap', alignItems: 'center', animation: 'fadeUp 0.4s ease 0.1s both' }}>
-                <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px', animation: 'fadeUp 0.4s ease 0.1s both' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
                     <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
                     <input
                         className="input"
-                        style={{ paddingLeft: '42px' }}
+                        style={{ paddingLeft: '42px', width: '100%' }}
                         placeholder="Search clubs..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
@@ -85,13 +103,13 @@ export const ClubsDirectory = () => {
 
             {/* Grid */}
             {loading ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                    {[1, 2, 3, 4, 5, 6].map(i => (
-                        <div key={i} style={{ height: '240px', borderRadius: 'var(--radius-lg)', background: 'var(--gray-200)' }} />
+                <div className="clubs-grid">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                        <div key={i} style={{ height: '340px', borderRadius: 'var(--radius-lg)', background: 'var(--gray-200)' }} />
                     ))}
                 </div>
             ) : filtered.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', animation: 'fadeUp 0.4s ease 0.15s both' }}>
+                <div className="clubs-grid" style={{ animation: 'fadeUp 0.4s ease 0.15s both' }}>
                     {filtered.map((club, idx) => (
                         <div key={club.id} className="card card-hover" onClick={() => navigate(`/clubs/${club.id}`)} style={{
                             display: 'flex', flexDirection: 'column',
@@ -114,11 +132,11 @@ export const ClubsDirectory = () => {
                                 )}
                             </div>
                             <div style={{ padding: '20px 24px 16px', flex: 1 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, fontFamily: 'var(--font-display)', lineHeight: 1.3 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: '10px', gap: '8px' }}>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>
                                         {club.name}
                                     </h3>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                                         {followedClubIds.includes(club.id) && (
                                             <Heart size={16} fill="var(--red)" color="var(--red)" />
                                         )}
@@ -127,7 +145,7 @@ export const ClubsDirectory = () => {
                                         </span>
                                     </div>
                                 </div>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', whiteSpace: 'normal', marginTop: '4px' }}>
                                     {club.description}
                                 </p>
                             </div>

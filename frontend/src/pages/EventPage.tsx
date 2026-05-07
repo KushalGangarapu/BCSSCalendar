@@ -70,7 +70,7 @@ export const EventPage = () => {
                     <div>
                         <h3 style={{ fontSize: '1.2rem', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '16px' }}>About this Event</h3>
                         {event.description ? (
-                            <p style={{ fontSize: '1.05rem', lineHeight: 1.7, color: 'var(--text-secondary)' }}>{event.description}</p>
+                            <p style={{ fontSize: '1.05rem', lineHeight: 1.7, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{event.description}</p>
                         ) : (
                             <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No additional details provided.</p>
                         )}

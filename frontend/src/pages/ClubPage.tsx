@@ -115,7 +115,7 @@ export const ClubPage = () => {
                         <h3 style={{ fontSize: '1.2rem', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Users size={20} className="text-red" /> About {club.name}
                         </h3>
-                        <p style={{ fontSize: '1.05rem', lineHeight: 1.7, color: 'var(--text-secondary)' }}>
+                        <p style={{ fontSize: '1.05rem', lineHeight: 1.7, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
                             {club.description}
                         </p>
                     </div>
