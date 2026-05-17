@@ -77,9 +77,16 @@ export const Dashboard = () => {
         setFollowedClubIds(followed);
     }, []);
 
+    const now = new Date();
+    const upcomingEvents = events.filter(e => {
+        const start = new Date(e.date);
+        const end = e.endDate ? new Date(e.endDate) : null;
+        return start >= now || (end && end >= now);
+    });
+
     const filteredEvents = followedOnly
-        ? events.filter(e => followedClubIds.includes(e.clubId))
-        : events;
+        ? upcomingEvents.filter(e => followedClubIds.includes(e.clubId))
+        : upcomingEvents;
 
     const displayEvents = filteredEvents.slice(0, 5);
 
@@ -179,7 +186,7 @@ export const Dashboard = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
                         {displayEvents.length > 0 ? displayEvents.map((event, idx) => {
-                            const isLive = isEventLive(event.date);
+                            const isLive = isEventLive(event.date, event.endDate);
                             const d = new Date(event.date);
                             const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
                             const day = d.getDate();
@@ -199,7 +206,6 @@ export const Dashboard = () => {
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{
                                             fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)',
-                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                             display: 'flex', alignItems: 'center', gap: '8px'
                                         }}>
                                             {isLive && <span className="glowing-dot" />}

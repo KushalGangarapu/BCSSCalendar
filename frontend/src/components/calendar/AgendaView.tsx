@@ -1,6 +1,5 @@
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isSameDay } from 'date-fns';
 import { Trash2, Clock, Calendar } from 'lucide-react';
-import { isEventLive } from '../../utils/timeUtils';
 
 export const AgendaView = ({
     events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
@@ -58,7 +57,6 @@ export const AgendaView = ({
                                 {/* Events Column */}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     {dayEvents.map((ev: any) => {
-                                        const isLive = isEventLive(ev.date);
                                         const style = getEventStyle(ev);
                                         return (
                                             <div key={ev.id} onClick={() => onEventClick(ev)} style={{
@@ -78,12 +76,11 @@ export const AgendaView = ({
                                                             <span style={{ fontSize: '1.1rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
                                                                 {ev.title}
                                                             </span>
-                                                            {isLive && <span style={{ fontSize: '0.65rem', color: '#fff', background: 'var(--red)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>LIVE</span>}
                                                         </div>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                                 <Clock size={14} />
-                                                                {format(parseISO(ev.date), 'h:mm a')}
+                                                                {format(parseISO(ev.date), 'h:mm a')}{ev.endDate ? (isSameDay(parseISO(ev.date), parseISO(ev.endDate)) ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ` – ${format(parseISO(ev.endDate), 'MMM d, h:mm a')}`) : ''}
                                                             </div>
                                                             <span>&bull;</span>
                                                             <span style={{ fontWeight: 600 }}>{ev.club?.name || 'School Event'}</span>

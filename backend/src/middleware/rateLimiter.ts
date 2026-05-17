@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import { ipKeyGenerator } from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import { Request, Response, NextFunction } from 'express';
 
@@ -32,7 +33,10 @@ export const loginRateLimiter = rateLimit({
     message: { error: 'Too many login attempts from this device, please try again after an hour' },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req, res) => {
-        return req.cookies?.deviceId || req.ip || 'unknown_ip'; // Fallback to IP if cookie assignment failed
+    keyGenerator: (req) => {
+        // Use deviceId cookie as primary key; fall back to IP (via ipKeyGenerator for IPv6 safety)
+        return req.cookies?.deviceId || ipKeyGenerator(req.ip || 'unknown_ip');
     }
 });
+
+

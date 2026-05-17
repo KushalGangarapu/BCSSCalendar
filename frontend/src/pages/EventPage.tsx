@@ -57,7 +57,10 @@ export const EventPage = () => {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
                             <Clock size={20} className="text-red" />
-                            <span style={{ fontWeight: 500 }}>{format(parseISO(event.date), 'h:mm a')}</span>
+                            <span style={{ fontWeight: 500 }}>
+                                {format(parseISO(event.date), 'h:mm a')}
+                                {event.endDate && ` – ${format(parseISO(event.endDate), 'h:mm a')}`}
+                            </span>
                         </div>
                         {event.club && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>

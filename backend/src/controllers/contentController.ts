@@ -151,7 +151,15 @@ export const getMetrics = async (req: Request, res: Response) => {
     try {
         const metrics = await prisma.metrics.findFirst();
         const clubCount = await prisma.club.count();
-        const eventCount = await prisma.event.count();
+        const now = new Date();
+        const eventCount = await prisma.event.count({
+            where: {
+                OR: [
+                    { date: { gte: now } },
+                    { endDate: { gte: now } },
+                ],
+            },
+        });
         res.json({
             pageVisits: metrics?.activeUsers || 0,
             clubCount,

@@ -125,11 +125,18 @@ export const ClubPage = () => {
                             <Calendar size={20} className="text-red" /> Upcoming Events
                         </h3>
 
-                        {club.events && club.events.length > 0 ? (
+                        {club.events && club.events.length > 0 ? (() => {
+                            const now = new Date();
+                            const upcomingEvents = club.events.filter((ev: any) => {
+                                const start = new Date(ev.date);
+                                const end = ev.endDate ? new Date(ev.endDate) : null;
+                                return start >= now || (end && end >= now);
+                            }).filter((ev: any, index: number, self: any[]) =>
+                                index === self.findIndex((t) => t.title === ev.title)
+                            );
+                            return upcomingEvents.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {club.events.filter((ev: any, index: number, self: any[]) =>
-                                    index === self.findIndex((t) => t.title === ev.title)
-                                ).map((ev: any) => (
+                                {upcomingEvents.map((ev: any) => (
                                     <div key={ev.id} onClick={() => navigate(`/events/${ev.id}`)} style={{
                                         padding: '16px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)',
                                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -142,14 +149,19 @@ export const ClubPage = () => {
                                         <div>
                                             <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: '4px' }}>{ev.title}</div>
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                                {format(parseISO(ev.date), 'EEEE, MMM do • h:mm a')}
+                                                {format(parseISO(ev.date), 'EEEE, MMM do • h:mm a')}{ev.endDate ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ''}
                                             </div>
                                         </div>
                                         <div style={{ color: 'var(--red)', fontWeight: 600, fontSize: '0.85rem' }}>View Details &rarr;</div>
                                     </div>
                                 ))}
                             </div>
-                        ) : (
+                            ) : (
+                            <div style={{ padding: '32px', textAlign: 'center', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border)' }}>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>There are no upcoming events scheduled for this club.</p>
+                            </div>
+                            );
+                        })() : (
                             <div style={{ padding: '32px', textAlign: 'center', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border)' }}>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>There are no upcoming events scheduled for this club.</p>
                             </div>

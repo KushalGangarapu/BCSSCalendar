@@ -1,4 +1,4 @@
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isSameDay } from 'date-fns';
 import { X, Clock, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -70,6 +70,7 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
                         <Clock size={16} style={{ color: categoryColor || 'var(--red)' }} />
                         {format(parseISO(event.date), 'EEEE, MMMM do, yyyy \u00B7 h:mm a')}
+                        {event.endDate && (isSameDay(parseISO(event.date), parseISO(event.endDate)) ? ` \u2013 ${format(parseISO(event.endDate), 'h:mm a')}` : ` \u2013 ${format(parseISO(event.endDate), 'EEEE, MMMM do \u00B7 h:mm a')}`)}
                     </div>
                 </div>
 

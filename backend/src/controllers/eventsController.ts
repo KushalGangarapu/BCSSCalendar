@@ -19,7 +19,7 @@ export const getEvents = async (req: Request, res: Response) => {
 };
 
 export const createEvent = async (req: Request, res: Response) => {
-    const { title, date, description, clubId, recurring, tags } = req.body;
+    const { title, date, endDate, description, clubId, recurring, tags } = req.body;
 
     try {
         // Basic validation
@@ -31,6 +31,9 @@ export const createEvent = async (req: Request, res: Response) => {
         // The frontend sends the date in ISO string format (which is UTC).
         // It's saved in the database as UTC.
         const baseDate = new Date(date);
+        const baseEndDate = endDate ? new Date(endDate) : null;
+        // Offset in ms between start and end (used for recurring instances)
+        const endDateOffset = baseEndDate ? baseEndDate.getTime() - baseDate.getTime() : null;
         const newEvents = [];
 
         // Depending on recurrence, generate future instances (e.g. for the next 4 months)
@@ -48,6 +51,7 @@ export const createEvent = async (req: Request, res: Response) => {
             newEvents.push({
                 title,
                 date: eventDate,
+                endDate: endDateOffset !== null ? new Date(eventDate.getTime() + endDateOffset) : null,
                 description,
                 clubId: clubId || null,
                 recurring,

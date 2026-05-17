@@ -1,6 +1,6 @@
 import { format, isSameMonth, isSameDay, startOfWeek, endOfWeek, endOfMonth, startOfMonth, addDays, parseISO } from 'date-fns';
 import { Trash2 } from 'lucide-react';
-import { isEventLive } from '../../utils/timeUtils';
+import { isEventOnDay } from '../../utils/timeUtils';
 
 export const MonthView = ({
     month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
@@ -18,7 +18,7 @@ export const MonthView = ({
             const d = day;
             const isThisMonth = isSameMonth(d, mStart);
             const isToday = isSameDay(d, new Date());
-            const dateMatch = events.filter((ev: any) => isSameDay(parseISO(ev.date), d));
+            const dateMatch = events.filter((ev: any) => isEventOnDay(ev, d));
 
             cells.push(
                 <div key={d.toString()} style={{
@@ -40,7 +40,6 @@ export const MonthView = ({
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         {dateMatch.map((ev: any) => {
-                            const isLive = isEventLive(ev.date);
                             return (
                                 <div key={ev.id} onClick={() => onEventClick(ev)} style={{
                                     position: 'relative', borderRadius: '4px',
@@ -53,8 +52,10 @@ export const MonthView = ({
                                     onMouseEnter={() => setHovered(ev)}
                                     onMouseLeave={() => setHovered(null)}
                                 >
-                                    {isLive && <span className="glowing-dot" style={{ width: '6px', height: '6px', marginRight: '0' }} />}
                                     {ev.title}
+                                    {ev.endDate && !isSameDay(parseISO(ev.date), parseISO(ev.endDate)) && (
+                                        <span style={{ fontSize: '0.6rem', opacity: 0.8, marginLeft: '2px', whiteSpace: 'nowrap' }}>→ {format(parseISO(ev.endDate), 'MMMM d')}</span>
+                                    )}
 
                                     {isAdmin && hovered?.id === ev.id && (
                                         <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev); }} style={{

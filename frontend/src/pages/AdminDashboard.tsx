@@ -16,7 +16,12 @@ export const AdminDashboard = () => {
     // Event form state
     const [title, setTitle] = useState('');
     const [date, setDate] = useState('');
+    const [hasTime, setHasTime] = useState(true);
     const [time, setTime] = useState('15:00');
+    const [hasEndDate, setHasEndDate] = useState(false);
+    const [endDate, setEndDate] = useState('');
+    const [hasEndTime, setHasEndTime] = useState(true);
+    const [endTime, setEndTime] = useState('16:00');
     const [description, setDescription] = useState('');
     const [clubId, setClubId] = useState('');
     const [recurring, setRecurring] = useState('');
@@ -91,16 +96,22 @@ export const AdminDashboard = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const dt = new Date(`${date}T${time}:00`);
+            const dt = hasTime ? new Date(`${date}T${time}:00`) : new Date(`${date}T00:00:00`);
+            const endDt = hasEndDate && endDate ? (hasEndTime ? new Date(`${endDate}T${endTime}:00`) : new Date(`${endDate}T23:59:00`)) : null;
             const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ title, date: dt.toISOString(), description, clubId, recurring: recurring || null, tags: eventTags }),
+                body: JSON.stringify({ title, date: dt.toISOString(), endDate: endDt?.toISOString() || null, description, clubId, recurring: recurring || null, tags: eventTags }),
             });
             if (r.ok) {
                 toast('Event published!');
                 setTitle('');
                 setDescription('');
                 setEventTags([]);
+                setHasEndDate(false);
+                setEndDate('');
+                setEndTime('16:00');
+                setHasTime(true);
+                setHasEndTime(true);
                 loadEvents();
             }
             else { const d = await r.json(); toast(d.error || 'Failed', 'error'); }
@@ -322,10 +333,21 @@ export const AdminDashboard = () => {
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '18px' }}>
                             <div><label className="label">Date</label><input required type="date" className="input" value={date} onChange={e => setDate(e.target.value)} /></div>
-                            <div><label className="label">Time</label>
-                                <select required className="input" value={time} onChange={e => setTime(e.target.value)}>
-                                    {timeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                </select>
+                            <div>
+                                <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    Time
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: 'var(--text-muted)' }}>
+                                        <input type="checkbox" checked={hasTime} onChange={e => setHasTime(e.target.checked)} style={{ accentColor: 'var(--red)', width: '13px', height: '13px' }} />
+                                        Specific time
+                                    </label>
+                                </label>
+                                {hasTime ? (
+                                    <select className="input" value={time} onChange={e => setTime(e.target.value)}>
+                                        {timeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                    </select>
+                                ) : (
+                                    <div className="input" style={{ color: 'var(--text-muted)', cursor: 'default' }}>All Day</div>
+                                )}
                             </div>
                             <div><label className="label">Recurrence</label>
                                 <select className="input" value={recurring} onChange={e => setRecurring(e.target.value)}>
@@ -336,6 +358,33 @@ export const AdminDashboard = () => {
                                 </select>
                             </div>
                         </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.87rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                <input type="checkbox" checked={hasEndDate} onChange={e => setHasEndDate(e.target.checked)} style={{ accentColor: 'var(--red)', width: '16px', height: '16px' }} />
+                                Add end date & time
+                            </label>
+                        </div>
+                        {hasEndDate && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', animation: 'fadeUp 0.2s ease both' }}>
+                                <div><label className="label">End Date</label><input required type="date" className="input" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
+                                <div>
+                                    <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        End Time
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: 'var(--text-muted)' }}>
+                                            <input type="checkbox" checked={hasEndTime} onChange={e => setHasEndTime(e.target.checked)} style={{ accentColor: 'var(--red)', width: '13px', height: '13px' }} />
+                                            Specific time
+                                        </label>
+                                    </label>
+                                    {hasEndTime ? (
+                                        <select className="input" value={endTime} onChange={e => setEndTime(e.target.value)}>
+                                            {timeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                        </select>
+                                    ) : (
+                                        <div className="input" style={{ color: 'var(--text-muted)', cursor: 'default' }}>End of Day</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <label className="label">Event Tags (Optional)</label>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
@@ -385,7 +434,7 @@ export const AdminDashboard = () => {
                                                 )}
                                             </div>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
+                                                {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{event.endDate ? ` – ${new Date(event.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
                                             </div>
                                         </div>
                                         <button onClick={() => handleDeleteEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)' }} title="Delete">

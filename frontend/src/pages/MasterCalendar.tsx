@@ -12,7 +12,7 @@ import { AgendaView } from '../components/calendar/AgendaView';
 import { EventDetailModal } from '../components/calendar/EventDetailModal';
 
 interface Event {
-    id: string; title: string; date: string; description?: string;
+    id: string; title: string; date: string; endDate?: string | null; description?: string;
     clubId?: string;
     club?: { name: string; category: string };
     recurring?: string | null;

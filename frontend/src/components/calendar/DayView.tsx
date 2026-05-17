@@ -1,6 +1,6 @@
 import { format, isSameDay, parseISO } from 'date-fns';
 import { Trash2, Clock } from 'lucide-react';
-import { isEventLive } from '../../utils/timeUtils';
+import { isEventOnDay } from '../../utils/timeUtils';
 
 export const DayView = ({
     month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
@@ -8,7 +8,7 @@ export const DayView = ({
     // We treat the `month` state as the selected day in DayView for simplicity, 
     // or the MasterCalendar can have a `selectedDate` state. We will use `month` as the day.
     const selectedDay = month;
-    const dateMatch = events.filter((ev: any) => isSameDay(parseISO(ev.date), selectedDay));
+    const dateMatch = events.filter((ev: any) => isEventOnDay(ev, selectedDay));
 
     return (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fadeUp 0.4s ease 0.1s both' }}>
@@ -32,7 +32,6 @@ export const DayView = ({
                     </div>
                 ) : (
                     dateMatch.map((ev: any) => {
-                        const isLive = isEventLive(ev.date);
                         return (
                             <div key={ev.id} onClick={() => onEventClick(ev)} style={{
                                 position: 'relative', borderRadius: 'var(--radius-md)',
@@ -54,12 +53,11 @@ export const DayView = ({
                                             <span style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
                                                 {ev.title}
                                             </span>
-                                            {isLive && <span style={{ fontSize: '0.65rem', color: '#fff', background: 'var(--red)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>LIVE</span>}
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <Clock size={14} />
-                                                {format(parseISO(ev.date), 'h:mm a')}
+                                                {format(parseISO(ev.date), 'h:mm a')}{ev.endDate ? (isSameDay(parseISO(ev.date), parseISO(ev.endDate)) ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ` – ${format(parseISO(ev.endDate), 'MMM d, h:mm a')}`) : ''}
                                             </div>
                                             <span>&bull;</span>
                                             <span style={{ fontWeight: 600 }}>{ev.club?.name || 'School Event'}</span>

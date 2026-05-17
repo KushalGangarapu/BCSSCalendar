@@ -15,7 +15,7 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
-  password  String   // Hashed password
+  password  String // Hashed password
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -44,18 +44,19 @@ model Event {
   id          String   @id @default(uuid())
   title       String
   date        DateTime // Stored in UTC
+  endDate     DateTime? // Optional end date/time, stored in UTC
   description String?
   clubId      String
   club        Club     @relation(fields: [clubId], references: [id])
-  recurring   String?  // null, "weekly", "biweekly", "monthly"
+  recurring   String? // null, "weekly", "biweekly", "monthly"
   tags        String[] @default([])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model Metrics {
-  id           String   @id @default(uuid())
-  activeUsers  Int      @default(0)
+  id            String   @id @default(uuid())
+  activeUsers   Int      @default(0)
   portalSignups Int      @default(0)
-  updatedAt    DateTime @updatedAt
+  updatedAt     DateTime @updatedAt
 }
