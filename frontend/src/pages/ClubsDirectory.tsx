@@ -2,11 +2,22 @@ import { useState, useEffect } from 'react';
 import { Search, X, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { MobileFilterDropdown } from '../components/MobileFilterDropdown';
 
 interface Club {
     id: string; name: string; category: string; description: string;
     instagram?: string; discord?: string; imageUrl?: string;
 }
+
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth <= 1024);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+    }, []);
+    return isMobile;
+};
 
 export const ClubsDirectory = () => {
     const [clubs, setClubs] = useState<Club[]>([]);
@@ -15,6 +26,7 @@ export const ClubsDirectory = () => {
     const [loading, setLoading] = useState(true);
     const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/clubs`)
@@ -32,6 +44,19 @@ export const ClubsDirectory = () => {
         return matchSearch && (!category || c.category === category);
     });
 
+    // Build filter options for mobile
+    const filterOptions = [
+        { name: 'All', selected: !category },
+        ...categories.map(cat => ({ name: cat, selected: category === cat })),
+    ];
+
+    const handleFilterToggle = (name: string) => {
+        if (name === 'All') {
+            setCategory(null);
+        } else {
+            setCategory(category === name ? null : name);
+        }
+    };
 
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
@@ -66,7 +91,7 @@ export const ClubsDirectory = () => {
             </div>
 
             {/* Search & Filters */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px', animation: 'fadeUp 0.4s ease 0.1s both' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px', animation: 'fadeUp 0.4s ease 0.1s both', position: 'relative', zIndex: 100 }}>
                 <div style={{ position: 'relative', width: '100%' }}>
                     <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
                     <input
@@ -77,28 +102,36 @@ export const ClubsDirectory = () => {
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    <button onClick={() => setCategory(null)} className="pill" style={{
-                        cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
-                        background: !category ? 'var(--black)' : 'var(--white)',
-                        color: !category ? '#fff' : 'var(--gray-700)',
-                        boxShadow: !category ? 'none' : '0 0 0 1.5px var(--gray-300)',
-                        transition: 'all 0.2s ease',
-                    }}>
-                        All
-                    </button>
-                    {categories.map(cat => (
-                        <button key={cat} onClick={() => setCategory(cat)} className="pill" style={{
+                {isMobile ? (
+                    <MobileFilterDropdown
+                        options={filterOptions}
+                        onToggle={handleFilterToggle}
+                        label="Category"
+                    />
+                ) : (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <button onClick={() => setCategory(null)} className="pill" style={{
                             cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
-                            background: category === cat ? 'var(--black)' : 'var(--white)',
-                            color: category === cat ? '#fff' : 'var(--gray-700)',
-                            boxShadow: category === cat ? 'none' : '0 0 0 1.5px var(--gray-300)',
+                            background: !category ? 'var(--black)' : 'var(--white)',
+                            color: !category ? '#fff' : 'var(--gray-700)',
+                            boxShadow: !category ? 'none' : '0 0 0 1.5px var(--gray-300)',
                             transition: 'all 0.2s ease',
                         }}>
-                            {cat}
+                            All
                         </button>
-                    ))}
-                </div>
+                        {categories.map(cat => (
+                            <button key={cat} onClick={() => setCategory(cat)} className="pill" style={{
+                                cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
+                                background: category === cat ? 'var(--black)' : 'var(--white)',
+                                color: category === cat ? '#fff' : 'var(--gray-700)',
+                                boxShadow: category === cat ? 'none' : '0 0 0 1.5px var(--gray-300)',
+                                transition: 'all 0.2s ease',
+                            }}>
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Grid */}

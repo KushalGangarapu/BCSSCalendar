@@ -213,7 +213,7 @@ export const Dashboard = () => {
                                             {isLive && <span style={{ fontSize: '0.65rem', color: 'var(--red)', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>LIVE</span>}
                                         </div>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
+                                            {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}{event.endDate ? (() => { const ed = new Date(event.endDate); return d.toDateString() === ed.toDateString() ? ` – ${ed.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}` : ` – ${ed.toLocaleDateString('en', { month: 'long', day: 'numeric' })}`; })() : ''} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
                                         </div>
                                     </div>
                                 </div>

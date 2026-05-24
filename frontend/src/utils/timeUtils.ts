@@ -22,12 +22,13 @@ export const isEventLive = (eventDateISO: string, endDateISO?: string | null): b
 /**
  * Checks if an event should appear on a given calendar day.
  * - Single-day events: show on their start date.
- * - Multi-day events: show on today (if today is within [start, end]), keeping the calendar clean.
+ * - Multi-day events: show on start date AND on today (if ongoing).
  */
 export const isEventOnDay = (event: { date: string; endDate?: string | null }, day: Date): boolean => {
     const start = parseISO(event.date);
     if (event.endDate && !isSameDay(start, parseISO(event.endDate))) {
-        // Multi-day event: only show on today's cell if ongoing
+        // Multi-day event: show on start date + today if ongoing
+        if (isSameDay(start, day)) return true;
         const end = parseISO(event.endDate);
         const today = new Date();
         if (!isSameDay(day, today)) return false;

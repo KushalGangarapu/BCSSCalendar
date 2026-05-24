@@ -1,4 +1,4 @@
-import { format, parseISO, isSameDay } from 'date-fns';
+import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
 import { Trash2, Clock, Calendar } from 'lucide-react';
 
 export const AgendaView = ({
@@ -10,11 +10,25 @@ export const AgendaView = ({
 
     // Sort events by date
     const sortedEvents = [...events].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
 
     sortedEvents.forEach((ev: any) => {
-        const dStr = format(parseISO(ev.date), 'yyyy-MM-dd');
+        const start = parseISO(ev.date);
+        const dStr = format(start, 'yyyy-MM-dd');
         if (!grouped[dStr]) grouped[dStr] = [];
         grouped[dStr].push(ev);
+
+        // Also add to today if it's an ongoing multi-day event
+        if (ev.endDate && !isSameDay(start, parseISO(ev.endDate))) {
+            const end = parseISO(ev.endDate);
+            if (dStr !== todayStr && startOfDay(today) >= startOfDay(start) && startOfDay(today) <= startOfDay(end)) {
+                if (!grouped[todayStr]) grouped[todayStr] = [];
+                if (!grouped[todayStr].some((e: any) => e.id === ev.id)) {
+                    grouped[todayStr].push(ev);
+                }
+            }
+        }
     });
 
     const dates = Object.keys(grouped).sort();

@@ -8,13 +8,19 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['wildcat-logo.png'],
+      workbox: {
+        navigateFallback: '/index.html',
+        navigateFallbackAllowlist: [/^(?!\/(api|_)).*$/],
+      },
       manifest: {
         name: 'Wildcat Calendar',
         short_name: 'Wildcats',
         description: 'Burnaby Central Secondary School Clubs and Events',
-        theme_color: '#ffffff',
+        theme_color: '#D32F2F',
         background_color: '#ffffff',
         display: 'standalone',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: '/wildcat-logo.png',

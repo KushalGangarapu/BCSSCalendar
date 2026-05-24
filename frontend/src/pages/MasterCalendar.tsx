@@ -10,6 +10,7 @@ import { WeekView } from '../components/calendar/WeekView';
 import { DayView } from '../components/calendar/DayView';
 import { AgendaView } from '../components/calendar/AgendaView';
 import { EventDetailModal } from '../components/calendar/EventDetailModal';
+import { MobileFilterDropdown } from '../components/MobileFilterDropdown';
 
 interface Event {
     id: string; title: string; date: string; endDate?: string | null; description?: string;
@@ -18,6 +19,16 @@ interface Event {
     recurring?: string | null;
     tags?: string[];
 }
+
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth <= 1024);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+    }, []);
+    return isMobile;
+};
 
 // Color-coding for event types
 const getEventStyle = (clubName: string, categoryColor?: string | null): React.CSSProperties => {
@@ -35,7 +46,7 @@ const getEventStyle = (clubName: string, categoryColor?: string | null): React.C
 
 export const MasterCalendar = () => {
     const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
-    const [month, setMonth] = useState(new Date()); // acts as the base reference date
+    const [month, setMonth] = useState(new Date());
     const [events, setEvents] = useState<Event[]>([]);
     const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -45,6 +56,7 @@ export const MasterCalendar = () => {
     const [followedOnly, setFollowedOnly] = useState(false);
     const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/events`).then(r => r.json()).then(setEvents).catch(console.error);
@@ -75,25 +87,20 @@ export const MasterCalendar = () => {
         }
     };
 
-    // Top level data filtering based on user selections
     const displayEvents = events.filter(ev => {
         let categoryMatch = false;
-
         if (selectedCategories.length === 0) {
             categoryMatch = true;
         } else {
-            // Check if ANY of the selected categories match the event's tags or club category
             const hasMatchingTag = ev.tags && ev.tags.some(tag => selectedCategories.includes(tag));
             const hasMatchingClubCategory = ev.club?.category && selectedCategories.includes(ev.club.category);
             categoryMatch = Boolean(hasMatchingTag || hasMatchingClubCategory);
         }
-
         const followMatch = !followedOnly || (ev.clubId && followedClubIds.includes(ev.clubId));
         return categoryMatch && followMatch;
     });
 
     const resolveEventStyle = (ev: Event) => {
-        // If event has multiple tags, try to find a color for the first one that exists in the categories array
         let primaryColor = null;
         if (ev.tags && ev.tags.length > 0) {
             for (const tag of ev.tags) {
@@ -104,12 +111,9 @@ export const MasterCalendar = () => {
                 }
             }
         }
-
-        // Fallback to club category color, then finally to the hashed getEventStyle
         if (!primaryColor) {
             primaryColor = categories.find(c => c.name === ev.club?.category)?.color || null;
         }
-
         return getEventStyle(ev.club?.name || 'School Event', primaryColor);
     };
 
@@ -121,65 +125,90 @@ export const MasterCalendar = () => {
         }
     };
 
+    // Build filter options for mobile dropdown
+    const filterOptions = [
+        { name: 'Followed Clubs', color: undefined, selected: followedOnly },
+        ...categories.map(cat => ({ name: cat.name, color: cat.color, selected: selectedCategories.includes(cat.name) })),
+    ];
+
+    const handleFilterToggle = (name: string) => {
+        if (name === 'Followed Clubs') {
+            setFollowedOnly(!followedOnly);
+        } else {
+            toggleCategory(name);
+        }
+    };
+
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
             <Helmet>
                 <title>Calendar | Wildcat Calendar</title>
             </Helmet>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ position: 'relative', zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
                     <h1 style={{ fontSize: '2.4rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
                         {view === 'agenda' ? 'Agenda' : format(month, 'MMMM yyyy')}
                     </h1>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={() => setFollowedOnly(!followedOnly)}
-                            className="pill"
-                            style={{
-                                cursor: 'pointer', border: 'none', padding: '6px 14px', fontSize: '0.75rem',
-                                background: followedOnly ? 'var(--red)' : 'var(--white)',
-                                color: followedOnly ? '#fff' : 'var(--gray-700)',
-                                boxShadow: followedOnly ? 'none' : '0 0 0 1px var(--gray-300)',
-                                transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px'
-                            }}
-                        >
-                            <Heart size={14} fill={followedOnly ? 'currentColor' : 'none'} />
-                            Your Followed Clubs
-                        </button>
-                        <div style={{ width: '1px', background: 'var(--gray-300)', margin: '0 4px' }} />
-                        {categories.map(cat => (
+                    {isMobile ? (
+                        <div style={{ marginTop: '12px' }}>
+                            <MobileFilterDropdown options={filterOptions} onToggle={handleFilterToggle} />
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
                             <button
-                                key={cat.name}
-                                onClick={() => toggleCategory(cat.name)}
+                                onClick={() => setFollowedOnly(!followedOnly)}
                                 className="pill"
                                 style={{
                                     cursor: 'pointer', border: 'none', padding: '6px 14px', fontSize: '0.75rem',
-                                    background: selectedCategories.includes(cat.name) ? cat.color : 'var(--white)',
-                                    color: selectedCategories.includes(cat.name) ? '#fff' : 'var(--gray-700)',
-                                    boxShadow: selectedCategories.includes(cat.name) ? 'none' : '0 0 0 1px var(--gray-300)',
-                                    transition: 'all 0.2s ease'
+                                    background: followedOnly ? 'var(--red)' : 'var(--white)',
+                                    color: followedOnly ? '#fff' : 'var(--gray-700)',
+                                    boxShadow: followedOnly ? 'none' : '0 0 0 1px var(--gray-300)',
+                                    transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px'
                                 }}
                             >
-                                {cat.name}
+                                <Heart size={14} fill={followedOnly ? 'currentColor' : 'none'} />
+                                Your Followed Clubs
                             </button>
-                        ))}
-                    </div>
+                            <div style={{ width: '1px', background: 'var(--gray-300)', margin: '0 4px' }} />
+                            {categories.map(cat => (
+                                <button
+                                    key={cat.name}
+                                    onClick={() => toggleCategory(cat.name)}
+                                    className="pill"
+                                    style={{
+                                        cursor: 'pointer', border: 'none', padding: '6px 14px', fontSize: '0.75rem',
+                                        background: selectedCategories.includes(cat.name) ? cat.color : 'var(--white)',
+                                        color: selectedCategories.includes(cat.name) ? '#fff' : 'var(--gray-700)',
+                                        boxShadow: selectedCategories.includes(cat.name) ? 'none' : '0 0 0 1px var(--gray-300)',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--white)', padding: '6px', borderRadius: 'var(--radius-pill)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => setView('month')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'month' ? 'var(--gray-100)' : 'transparent', color: view === 'month' ? 'var(--red)' : 'var(--text-muted)' }} title="Month View"><LayoutGrid size={18} /></button>
-                        <button onClick={() => setView('week')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'week' ? 'var(--gray-100)' : 'transparent', color: view === 'week' ? 'var(--red)' : 'var(--text-muted)' }} title="Week View"><CalIcon size={18} /></button>
-                        <button onClick={() => setView('day')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'day' ? 'var(--gray-100)' : 'transparent', color: view === 'day' ? 'var(--red)' : 'var(--text-muted)' }} title="Day View"><Map size={18} /></button>
-                        <button onClick={() => setView('agenda')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'agenda' ? 'var(--gray-100)' : 'transparent', color: view === 'agenda' ? 'var(--red)' : 'var(--text-muted)' }} title="Agenda View"><List size={18} /></button>
+                <div style={{
+                    display: 'flex', gap: isMobile ? '6px' : '12px', alignItems: 'center',
+                    background: 'var(--white)', padding: '6px', borderRadius: 'var(--radius-pill)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid var(--border)',
+                    overflowX: 'auto', maxWidth: '100%', flexShrink: 0,
+                }}>
+                    <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                        <button onClick={() => setView('month')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'month' ? 'var(--gray-100)' : 'transparent', color: view === 'month' ? 'var(--red)' : 'var(--text-muted)' }} title="Month"><LayoutGrid size={18} /></button>
+                        <button onClick={() => setView('week')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'week' ? 'var(--gray-100)' : 'transparent', color: view === 'week' ? 'var(--red)' : 'var(--text-muted)' }} title="Week"><CalIcon size={18} /></button>
+                        <button onClick={() => setView('day')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'day' ? 'var(--gray-100)' : 'transparent', color: view === 'day' ? 'var(--red)' : 'var(--text-muted)' }} title="Day"><Map size={18} /></button>
+                        <button onClick={() => setView('agenda')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'agenda' ? 'var(--gray-100)' : 'transparent', color: view === 'agenda' ? 'var(--red)' : 'var(--text-muted)' }} title="Agenda"><List size={18} /></button>
                     </div>
 
-                    <div style={{ height: '24px', width: '1px', background: 'var(--border)' }} />
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ height: '24px', width: '1px', background: 'var(--border)', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', gap: isMobile ? '4px' : '10px', alignItems: 'center', flexShrink: 0 }}>
                         {isAdmin && (
-                            <button onClick={() => navigate('/admin/dashboard')} className="btn btn-red" style={{ height: '36px', padding: '0 16px', gap: '6px' }}>
-                                <Plus size={16} /> <span style={{ display: 'none' }}>Add Event</span>
+                            <button onClick={() => navigate('/admin/dashboard')} className="btn btn-red" style={{ height: '36px', padding: '0 12px', gap: '6px' }}>
+                                <Plus size={16} />
                             </button>
                         )}
                         <button onClick={() => setMonth(view === 'month' || view === 'agenda' ? subMonths(month, 1) : addDays(month, view === 'week' ? -7 : -1))} className="btn btn-ghost" style={{
@@ -188,7 +217,7 @@ export const MasterCalendar = () => {
                         }}>
                             <ChevronLeft size={20} />
                         </button>
-                        <button onClick={() => setMonth(new Date())} className="btn btn-outline" style={{ height: '36px', padding: '0 16px', fontSize: '0.85rem' }}>
+                        <button onClick={() => setMonth(new Date())} className="btn btn-outline" style={{ height: '36px', padding: '0 12px', fontSize: '0.82rem' }}>
                             Today
                         </button>
                         <button onClick={() => setMonth(view === 'month' || view === 'agenda' ? addMonths(month, 1) : addDays(month, view === 'week' ? 7 : 1))} className="btn btn-ghost" style={{
