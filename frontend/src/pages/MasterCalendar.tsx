@@ -21,9 +21,9 @@ interface Event {
 }
 
 const useIsMobile = () => {
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1200);
     useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth <= 1024);
+        const handler = () => setIsMobile(window.innerWidth <= 1200);
         window.addEventListener('resize', handler);
         return () => window.removeEventListener('resize', handler);
     }, []);
@@ -45,7 +45,8 @@ const getEventStyle = (clubName: string, categoryColor?: string | null): React.C
 };
 
 export const MasterCalendar = () => {
-    const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
+    const isMobileInitial = window.innerWidth <= 1200;
+    const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>(isMobileInitial ? 'agenda' : 'month');
     const [month, setMonth] = useState(new Date());
     const [events, setEvents] = useState<Event[]>([]);
     const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);
@@ -232,10 +233,49 @@ export const MasterCalendar = () => {
 
             {/* Calendar Views */}
             <div style={{ minHeight: '500px' }}>
-                {view === 'month' && <MonthView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
-                {view === 'week' && <WeekView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
-                {view === 'day' && <DayView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
-                {view === 'agenda' && <AgendaView events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
+                {events.length === 0 ? (
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        padding: '100px 20px', textAlign: 'center', animation: 'fadeUp 0.4s ease both',
+                        background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)'
+                    }}>
+                        <div style={{
+                            width: '80px', height: '80px', borderRadius: '50%', background: 'var(--gray-200)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
+                        }}>
+                            <CalIcon size={32} style={{ color: 'var(--gray-400)' }} />
+                        </div>
+                        <h3 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '8px' }}>
+                            Loading Calendar...
+                        </h3>
+                    </div>
+                ) : displayEvents.length === 0 && selectedCategories.length > 0 ? (
+                     <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        padding: '100px 20px', textAlign: 'center', animation: 'fadeUp 0.4s ease both',
+                        background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)'
+                    }}>
+                        <div style={{
+                            width: '80px', height: '80px', borderRadius: '50%', background: 'var(--gray-200)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
+                        }}>
+                            <CalIcon size={32} style={{ color: 'var(--gray-400)' }} />
+                        </div>
+                        <h3 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '8px' }}>
+                            No events found
+                        </h3>
+                        <p style={{ color: 'var(--text-muted)', maxWidth: '360px' }}>
+                            No events closely match the selected filters.
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        {view === 'month' && <MonthView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} isMobile={isMobile} />}
+                        {view === 'week' && <WeekView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} isMobile={isMobile} />}
+                        {view === 'day' && <DayView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
+                        {view === 'agenda' && <AgendaView events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
+                    </>
+                )}
             </div>
 
             {/* Event Details Modal */}

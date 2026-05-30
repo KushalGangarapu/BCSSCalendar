@@ -31,7 +31,7 @@ export const AgendaView = ({
         }
     });
 
-    const dates = Object.keys(grouped).sort();
+    const dates = Object.keys(grouped).filter(d => d >= todayStr).sort();
 
     return (
         <div className="card" style={{ overflow: 'hidden', animation: 'fadeUp 0.4s ease 0.1s both' }}>

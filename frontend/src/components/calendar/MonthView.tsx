@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { isEventOnDay } from '../../utils/timeUtils';
 
 export const MonthView = ({
-    month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
+    month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle, isMobile
 }: any) => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const mStart = startOfMonth(month);
@@ -22,7 +22,7 @@ export const MonthView = ({
 
             cells.push(
                 <div key={d.toString()} style={{
-                    minHeight: '120px', padding: '6px 8px',
+                    minHeight: isMobile ? '80px' : '120px', padding: isMobile ? '4px' : '6px 8px',
                     borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
                     background: isThisMonth ? '#fff' : 'var(--gray-50)',
                     transition: 'background 0.15s ease',
@@ -43,7 +43,7 @@ export const MonthView = ({
                             return (
                                 <div key={ev.id} onClick={() => onEventClick(ev)} style={{
                                     position: 'relative', borderRadius: '4px',
-                                    padding: '4px 8px', fontSize: '0.72rem', fontWeight: 700,
+                                    padding: isMobile ? '2px 4px' : '4px 8px', fontSize: isMobile ? '0.65rem' : '0.72rem', fontWeight: 700,
                                     cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                     display: 'flex', alignItems: 'center', gap: '4px',
                                     fontFamily: 'var(--font-display)', letterSpacing: '0.01em',
@@ -53,7 +53,7 @@ export const MonthView = ({
                                     onMouseLeave={() => setHovered(null)}
                                 >
                                     {ev.title}
-                                    {ev.endDate && !isSameDay(parseISO(ev.date), parseISO(ev.endDate)) && (
+                                    {!isMobile && ev.endDate && !isSameDay(parseISO(ev.date), parseISO(ev.endDate)) && (
                                         <span style={{ fontSize: '0.6rem', opacity: 0.8, marginLeft: '2px', whiteSpace: 'nowrap' }}>→ {format(parseISO(ev.endDate), 'MMMM d')}</span>
                                     )}
 

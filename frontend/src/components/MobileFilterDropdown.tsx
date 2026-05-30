@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Filter, ChevronDown } from 'lucide-react';
 
 interface FilterOption {
@@ -15,15 +15,28 @@ interface MobileFilterDropdownProps {
 
 export const MobileFilterDropdown = ({ options, onToggle, label = 'Filters' }: MobileFilterDropdownProps) => {
     const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLButtonElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: Event) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, []);
 
     // Don't count "All" as an active filter
     const activeCount = options.filter(o => o.selected && o.name !== 'All').length;
 
     return (
-        <>
+        <div ref={containerRef} style={{ position: 'relative' }}>
             <button
-                ref={ref}
                 onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
                 className="btn"
                 style={{
@@ -48,61 +61,53 @@ export const MobileFilterDropdown = ({ options, onToggle, label = 'Filters' }: M
             </button>
 
             {open && (
-                <>
-                    {/* Invisible backdrop to catch clicks */}
-                    <div 
-                        style={{ position: 'fixed', inset: 0, zIndex: 998 }} 
-                        onClick={() => setOpen(false)}
-                        onTouchStart={() => setOpen(false)}
-                    />
-                    <div style={{
-                        position: 'fixed', top: ref.current ? ref.current.getBoundingClientRect().bottom + 6 : '150px', 
-                        left: ref.current ? ref.current.getBoundingClientRect().left : '20px', 
-                        zIndex: 999,
-                        background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
-                        boxShadow: 'var(--shadow-lg)', minWidth: '200px', padding: '8px 0',
-                        animation: 'fadeUp 0.15s ease both',
-                    }}>
-                        {options.map(opt => (
-                            <div
-                                key={opt.name}
-                                role="button"
-                                tabIndex={0}
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(opt.name); }}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(opt.name); } }}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '10px',
-                                    padding: '10px 16px', cursor: 'pointer', fontSize: '0.88rem',
-                                    fontWeight: 600, fontFamily: 'var(--font-display)',
-                                    color: opt.selected ? 'var(--text)' : 'var(--text-secondary)',
-                                    background: opt.selected ? 'var(--gray-50)' : 'transparent',
-                                    transition: 'background 0.15s',
-                                    userSelect: 'none',
-                                    WebkitTapHighlightColor: 'transparent',
-                                }}
-                            >
-                                <span style={{
-                                    width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0,
-                                    border: opt.selected ? 'none' : '2px solid var(--gray-300)',
-                                    background: opt.selected ? (opt.color || 'var(--red)') : 'transparent',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    transition: 'all 0.15s',
-                                }}>
-                                    {opt.selected && (
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12" />
-                                        </svg>
-                                    )}
-                                </span>
-                                {opt.color && (
-                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: opt.color, flexShrink: 0 }} />
+                <div style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', 
+                    left: 0, 
+                    zIndex: 999,
+                    background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-lg)', minWidth: '200px', padding: '8px 0',
+                    animation: 'fadeUp 0.15s ease both',
+                }}>
+                    {options.map(opt => (
+                        <div
+                            key={opt.name}
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(opt.name); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(opt.name); } }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '10px 16px', cursor: 'pointer', fontSize: '0.88rem',
+                                fontWeight: 600, fontFamily: 'var(--font-display)',
+                                color: opt.selected ? 'var(--text)' : 'var(--text-secondary)',
+                                background: opt.selected ? 'var(--gray-50)' : 'transparent',
+                                transition: 'background 0.15s',
+                                userSelect: 'none',
+                                WebkitTapHighlightColor: 'transparent',
+                            }}
+                        >
+                            <span style={{
+                                width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0,
+                                border: opt.selected ? 'none' : '2px solid var(--gray-300)',
+                                background: opt.selected ? (opt.color || 'var(--red)') : 'transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'all 0.15s',
+                            }}>
+                                {opt.selected && (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
                                 )}
-                                {opt.name}
-                            </div>
-                        ))}
-                    </div>
-                </>
+                            </span>
+                            {opt.color && (
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: opt.color, flexShrink: 0 }} />
+                            )}
+                            {opt.name}
+                        </div>
+                    ))}
+                </div>
             )}
-        </>
+        </div>
     );
 };

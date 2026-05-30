@@ -3,7 +3,7 @@ import { Trash2, Clock } from 'lucide-react';
 import { isEventOnDay } from '../../utils/timeUtils';
 
 export const WeekView = ({
-    month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
+    month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle, isMobile
 }: any) => {
     const start = startOfWeek(month);
     const end = endOfWeek(month);
@@ -49,8 +49,8 @@ export const WeekView = ({
                                 return (
                                     <div key={ev.id} onClick={() => onEventClick(ev)} style={{
                                         position: 'relative', borderRadius: 'var(--radius-md)',
-                                        padding: '10px', fontSize: '0.8rem', fontWeight: 600,
-                                        cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px',
+                                        padding: isMobile ? '4px' : '10px', fontSize: isMobile ? '0.65rem' : '0.8rem', fontWeight: 600,
+                                        cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: isMobile ? '2px' : '6px',
                                         fontFamily: 'var(--font)', transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                                         ...getEventStyle(ev)
                                     }}
@@ -59,14 +59,16 @@ export const WeekView = ({
                                         className="card-hover"
                                     >
                                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
-                                            <span style={{ fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.3 }}>
+                                            <span style={{ fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'nowrap' : 'normal' }}>
                                                 {ev.title}
                                             </span>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', opacity: 0.9 }}>
-                                            <Clock size={12} />
-                                            {format(parseISO(ev.date), 'h:mm a')}{ev.endDate ? (isSameDay(parseISO(ev.date), parseISO(ev.endDate)) ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ` – ${format(parseISO(ev.endDate), 'MMM d, h:mm a')}`) : ''}
-                                        </div>
+                                        {!isMobile && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', opacity: 0.9 }}>
+                                                <Clock size={12} />
+                                                {format(parseISO(ev.date), 'h:mm a')}{ev.endDate ? (isSameDay(parseISO(ev.date), parseISO(ev.endDate)) ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ` – ${format(parseISO(ev.endDate), 'MMM d, h:mm a')}`) : ''}
+                                            </div>
+                                        )}
 
                                         {isAdmin && hovered?.id === ev.id && (
                                             <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev); }} style={{
