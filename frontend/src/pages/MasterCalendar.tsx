@@ -45,8 +45,7 @@ const getEventStyle = (clubName: string, categoryColor?: string | null): React.C
 };
 
 export const MasterCalendar = () => {
-    const isMobileInitial = window.innerWidth <= 1200;
-    const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>(isMobileInitial ? 'agenda' : 'month');
+    const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
     const [month, setMonth] = useState(new Date());
     const [events, setEvents] = useState<Event[]>([]);
     const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);

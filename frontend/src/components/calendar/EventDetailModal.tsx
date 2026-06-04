@@ -62,7 +62,7 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                     </div>
                     <h2 style={{
                         fontSize: '1.8rem', fontFamily: 'var(--font-display)',
-                        fontWeight: 800, lineHeight: 1.2, margin: '8px 0 16px'
+                        fontWeight: 800, lineHeight: 1.2, margin: '8px 0 16px', wordWrap: 'break-word', overflowWrap: 'break-word'
                     }}>
                         {event.title}
                     </h2>

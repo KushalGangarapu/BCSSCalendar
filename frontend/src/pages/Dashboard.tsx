@@ -90,6 +90,8 @@ export const Dashboard = () => {
 
     const displayEvents = filteredEvents.slice(0, 5);
 
+    const isMobile = window.innerWidth <= 1200;
+
     return (
         <div>
             <Helmet>
@@ -130,14 +132,14 @@ export const Dashboard = () => {
             </div>
 
             {/* Stat Cards — Page Visits, Upcoming Events, Number of Clubs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
                 <StatCard icon={Eye} label="Unique Visits" value={metrics.pageVisits!} delay={0.15} />
                 <StatCard icon={Calendar} label="Upcoming Events" value={metrics.eventCount!} delay={0.25} />
                 <StatCard icon={Users} label="Number of Clubs" value={metrics.clubCount!} delay={0.35} />
             </div>
 
             {/* Split Layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', animation: 'fadeUp 0.5s ease 0.4s both' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '24px', animation: 'fadeUp 0.5s ease 0.4s both' }}>
                 {/* Featured Clubs */}
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

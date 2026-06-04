@@ -474,22 +474,16 @@ textarea.input {
   /* Main content area needs bottom padding for the fixed nav */
   .main {
     margin-left: 0;
-    padding: 24px 16px 90px 16px;
+    padding: 24px 16px 120px 16px;
   }
 
-  /* Dashboard Stat Cards */
+  /* Dashboard Stat Cards — only target the homepage stat card grid */
   div[style*="grid-template-columns: repeat(3, 1fr)"] {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
 
-  /* Dashboard Split Layout (Featured Clubs / Upcoming Events) */
-  div[style*="grid-template-columns: 1fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Master Calendar - hide weekends or force horizontal scroll on mobile */
-  /* We will let it scroll if it doesn't fit, but reduce padding */
+  /* Master Calendar - reduce heading size */
   .main h1 {
     font-size: 2rem !important;
   }
@@ -507,49 +501,11 @@ textarea.input {
     display: flex !important;
   }
 
-  div[style*="grid-template-columns: 260px 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
-
   /* Master Calendar header stacking */
   .main>div>div[style*="margin-bottom: 28px"] {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 16px !important;
-  }
-
-  /* Master Calendar internal scroll */
-  .main .card {
-    overflow-x: auto !important;
-  }
-
-  .main .card>div[style*="grid-template-columns: repeat(7, 1fr)"] {
-    min-width: 700px;
-  }
-
-  /* Club Card Responsiveness - Stack, Center, and proportional button */
-  .card[style*="padding: 20px 24px"] {
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    gap: 16px !important;
-    padding: 20px 16px !important;
-  }
-
-  .card[style*="padding: 20px 24px"]>div:first-child {
-    margin-right: 0 !important;
-    width: 100%;
-  }
-
-  /* Make sure internal text doesn't overflow */
-  .card[style*="padding: 20px 24px"]>div:first-child>div {
-    white-space: normal !important;
-    text-overflow: clip !important;
-  }
-
-  .card[style*="padding: 20px 24px"] .btn {
-    width: 90%;
-    margin: 0 auto;
   }
 
   /* Detail Pages (Club & Event) Responsiveness */
@@ -567,15 +523,9 @@ textarea.input {
   .main .card>div[style*="flex-wrap: wrap"][style*="borderBottom"]>a {
     justify-content: center !important;
   }
-
-  /* Stack Club Page Upcoming Events list items */
-  .main .card>div>div>div[style*="justify-content: space-between"] {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 12px !important;
-  }
 }
 
+/* Phone-specific overrides */
 @media (max-width: 600px) {
 
   /* Make all inputs full width and easier to tap */
@@ -598,5 +548,21 @@ textarea.input {
 
   .modal>div {
     padding: 24px !important;
+  }
+}
+
+/* Landscape phone — shorter viewport, compact bottom nav */
+@media (max-height: 500px) and (orientation: landscape) {
+  .sidebar {
+    padding: 0 12px;
+  }
+
+  .sidebar nav a {
+    padding: 8px 12px !important;
+    font-size: 0.65rem !important;
+  }
+
+  .main {
+    padding-bottom: 80px;
   }
 }

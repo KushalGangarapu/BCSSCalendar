@@ -46,7 +46,7 @@ export const EventPage = () => {
                         }}>{event.club?.category || 'Event'}</span>
                     </div>
 
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '24px', lineHeight: 1.1 }}>
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '24px', lineHeight: 1.1, wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                         {event.title}
                     </h1>
 

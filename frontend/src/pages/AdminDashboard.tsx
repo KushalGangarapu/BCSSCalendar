@@ -10,7 +10,18 @@ interface Club { id: string; name: string; category: string; description: string
 
 type Tab = 'events' | 'clubs';
 
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1200);
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth <= 1200);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+    }, []);
+    return isMobile;
+};
+
 export const AdminDashboard = () => {
+    const isMobile = useIsMobile();
     const [tab, setTab] = useState<Tab>('events');
 
     // Event form state
@@ -322,7 +333,7 @@ export const AdminDashboard = () => {
                         <h2 style={{ fontSize: '1.15rem', fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0 }}>Create New Event</h2>
                     </div>
                     <form onSubmit={handleEventSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '18px' }}>
                             <div><label className="label">Event Title</label><input required className="input" placeholder="e.g. Winter Social" value={title} onChange={e => setTitle(e.target.value)} /></div>
                             <div><label className="label">Hosting Club</label>
                                 <select className="input" value={clubId} onChange={e => setClubId(e.target.value)}>
@@ -331,7 +342,7 @@ export const AdminDashboard = () => {
                                 </select>
                             </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '18px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '18px' }}>
                             <div><label className="label">Date</label><input required type="date" className="input" value={date} onChange={e => setDate(e.target.value)} /></div>
                             <div>
                                 <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -365,7 +376,7 @@ export const AdminDashboard = () => {
                             </label>
                         </div>
                         {hasEndDate && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', animation: 'fadeUp 0.2s ease both' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '18px', animation: 'fadeUp 0.2s ease both' }}>
                                 <div><label className="label">End Date</label><input required type="date" className="input" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
                                 <div>
                                     <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -423,21 +434,21 @@ export const AdminDashboard = () => {
                             {events.map((event, idx) => {
                                 const d = new Date(event.date);
                                 return (
-                                    <div key={event.id || idx} className="card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div key={event.id || idx} className="card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                {event.title}
+                                            <div style={{ fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ wordBreak: 'break-word' }}>{event.title}</span>
                                                 {event.tags && event.tags.length > 0 && (
-                                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                                        {event.tags.map((t: string) => <span key={t} style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'var(--gray-200)', borderRadius: '4px' }}>{t}</span>)}
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                        {event.tags.map((t: string) => <span key={t} style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'var(--gray-200)', borderRadius: '4px', whiteSpace: 'nowrap' }}>{t}</span>)}
                                                     </div>
                                                 )}
                                             </div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-word' }}>
                                                 {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{event.endDate ? ` – ${new Date(event.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
                                             </div>
                                         </div>
-                                        <button onClick={() => handleDeleteEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)' }} title="Delete">
+                                        <button onClick={() => handleDeleteEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)', flexShrink: 0 }} title="Delete">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -453,7 +464,7 @@ export const AdminDashboard = () => {
 
             {/* Clubs & Categories Tab */}
             {tab === 'clubs' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', animation: 'fadeUp 0.3s ease both' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '24px', animation: 'fadeUp 0.3s ease both' }}>
                     {/* Club Form */}
                     <div className="card" style={{ padding: '28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '14px', borderBottom: '1px solid var(--border)' }}>
@@ -484,7 +495,7 @@ export const AdminDashboard = () => {
                                 </div>
                             )}
                             <div><label className="label">Description</label><textarea required className="input" rows={2} style={{ resize: 'none' }} placeholder="Brief description..." value={clubDesc} onChange={e => setClubDesc(e.target.value)} /></div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                                 <div><label className="label">Instagram (optional)</label><input className="input" placeholder="https://..." value={clubInsta} onChange={e => setClubInsta(e.target.value)} /></div>
                                 <div><label className="label">Discord (optional)</label><input className="input" placeholder="https://..." value={clubDiscord} onChange={e => setClubDiscord(e.target.value)} /></div>
                             </div>
@@ -596,16 +607,21 @@ export const AdminDashboard = () => {
                                     All Clubs ({clubs.length})
                                 </h3>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '350px', overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '350px', overflowY: 'auto' }}>
                                 {clubs.map(club => (
                                     <div key={club.id} className="card" style={{
-                                        padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px',
                                     }}>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)' }}>{club.name}</div>
-                                            <span className="pill pill-dark" style={{ marginTop: '4px', fontSize: '0.7rem' }}>{club.category}</span>
+                                            <div style={{ fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)', wordBreak: 'break-word' }}>{club.name}</div>
+                                            <span style={{
+                                                marginTop: '4px', fontSize: '0.65rem', display: 'inline-block',
+                                                padding: '2px 8px', borderRadius: 'var(--radius-pill)',
+                                                background: 'var(--gray-100)', color: 'var(--text-muted)',
+                                                fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase',
+                                            }}>{club.category}</span>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                                             <button onClick={() => startEditClub(club)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--gray-500)' }} title="Edit">
                                                 <Edit3 size={15} />
                                             </button>
