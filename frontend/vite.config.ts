@@ -11,6 +11,8 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         navigateFallbackAllowlist: [/^(?!\/(api|_)).*$/],
+        skipWaiting: true,
+        clientsClaim: true,
       },
       manifest: {
         name: 'Wildcat Calendar',
