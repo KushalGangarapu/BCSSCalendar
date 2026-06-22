@@ -80,19 +80,21 @@ export const MonthView = ({
 
     return (
         <div className="card" style={{ overflow: 'hidden', animation: 'fadeUp 0.4s ease 0.1s both' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)', background: 'var(--gray-50)' }}>
-                {days.map(d => (
-                    <div key={d} style={{
-                        textAlign: 'center', padding: '12px 0', fontSize: '0.75rem',
-                        fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-                        color: 'var(--text-muted)', fontFamily: 'var(--font-display)',
-                    }}>
-                        {d}
-                    </div>
-                ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
-                {buildCells()}
+            <div className="calendar-table-wrapper">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)', background: 'var(--gray-50)' }}>
+                    {days.map(d => (
+                        <div key={d} style={{
+                            textAlign: 'center', padding: '12px 0', fontSize: '0.75rem',
+                            fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+                            color: 'var(--text-muted)', fontFamily: 'var(--font-display)',
+                        }}>
+                            {d}
+                        </div>
+                    ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+                    {buildCells()}
+                </div>
             </div>
         </div>
     );

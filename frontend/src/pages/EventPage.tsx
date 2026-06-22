@@ -24,11 +24,11 @@ export const EventPage = () => {
             });
     }, [params.id]);
 
-    if (loading) return <div className="main" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}><div className="loading-spinner" /></div>;
-    if (!event || event.error) return <div className="main" style={{ padding: '40px', textAlign: 'center' }}><h2>Event not found</h2><button onClick={() => navigate('/calendar')} className="btn btn-ghost">Back to Calendar</button></div>;
+    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '50vh' }}><div className="loading-spinner" /></div>;
+    if (!event || event.error) return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Event not found</h2><button onClick={() => navigate('/calendar')} className="btn btn-ghost">Back to Calendar</button></div>;
 
     return (
-        <main className="main" style={{ animation: 'fadeUp 0.4s ease both' }}>
+        <div style={{ animation: 'fadeUp 0.4s ease both' }}>
             <Helmet>
                 <title>{event.title} | Wildcat Calendar</title>
             </Helmet>
@@ -80,6 +80,6 @@ export const EventPage = () => {
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
     );
 };

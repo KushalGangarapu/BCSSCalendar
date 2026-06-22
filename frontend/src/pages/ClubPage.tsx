@@ -43,11 +43,11 @@ export const ClubPage = () => {
             });
     }, [params.id]);
 
-    if (loading) return <div className="main" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}><div className="loading-spinner" /></div>;
-    if (!club || club.error) return <div className="main" style={{ padding: '40px', textAlign: 'center' }}><h2>Club not found</h2><button onClick={() => navigate('/clubs')} className="btn btn-ghost">Back to Directory</button></div>;
+    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '50vh' }}><div className="loading-spinner" /></div>;
+    if (!club || club.error) return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Club not found</h2><button onClick={() => navigate('/clubs')} className="btn btn-ghost">Back to Directory</button></div>;
 
     return (
-        <main className="main" style={{ animation: 'fadeUp 0.4s ease both' }}>
+        <div style={{ animation: 'fadeUp 0.4s ease both' }}>
             <Helmet>
                 <title>{club.name} | Wildcat Calendar</title>
                 <meta property="og:title" content={`${club.name} | BCSS`} />
@@ -169,6 +169,6 @@ export const ClubPage = () => {
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
     );
 };

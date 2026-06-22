@@ -60,10 +60,15 @@
   padding: 0;
 }
 
-html, body {
+html, body, #root {
   min-height: 100vh;
   min-height: -webkit-fill-available;
-  background-color: var(--black);
+  background-color: var(--bg);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
 }
 
 body {
@@ -163,6 +168,9 @@ a:hover {
   flex: 1;
   margin-left: 260px;
   padding: 40px 48px;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  background: var(--bg);
 }
 
 /* ---- BUTTONS ---- */
@@ -405,6 +413,11 @@ textarea.input {
 /* ---- RESPONSIVE ---- */
 @media (max-width: 1200px) {
 
+  /* Paint the root background black on mobile to blend the iOS safe area bottom gap */
+  html, body {
+    background-color: var(--black);
+  }
+
   /* Sidebar becomes bottom navigation */
   .app-layout {
     flex-direction: column;
@@ -514,22 +527,17 @@ textarea.input {
     gap: 16px !important;
   }
 
-  /* Master Calendar grid horizontal scroll */
-  .main .card[style*="overflow: hidden"] {
-    overflow-x: hidden !important; /* Keep outer card neat */
-  }
-
-  /* Make the inner grids scrollable instead of the whole card */
-  .main .card[style*="overflow: hidden"] > div[style*="grid-template-columns: repeat(7, 1fr)"] {
-    min-width: 600px !important;
-  }
-
-  /* Wrap the grids in a scrolling context by targeting the card itself to be a scrolling flex column if it isn't already, or just setting overflow on the card but preserving padding */
-  .main .card[style*="overflow: hidden"] {
-    overflow-x: auto !important;
+  /* Master Calendar Responsive Wrapper */
+  .calendar-table-wrapper {
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
     /* Add bottom padding so the scrollbar doesn't overlap the border */
-    padding-bottom: 8px !important; 
+    padding-bottom: 8px;
+  }
+  
+  .calendar-table-wrapper > div {
+    min-width: 800px !important;
   }
 
   /* Detail Pages (Club & Event) Responsiveness */
