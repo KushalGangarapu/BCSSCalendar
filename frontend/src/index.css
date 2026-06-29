@@ -60,15 +60,11 @@
   padding: 0;
 }
 
-html, body, #root {
+html, body {
   min-height: 100vh;
-  min-height: -webkit-fill-available;
+  /* Use dynamic viewport height to handle mobile browser address bars */
+  min-height: 100dvh;
   background-color: var(--bg);
-}
-
-#root {
-  display: flex;
-  flex-direction: column;
 }
 
 body {
@@ -146,7 +142,7 @@ a:hover {
 .app-layout {
   display: flex;
   min-height: 100vh;
-  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   background: var(--bg);
 }
 
@@ -168,8 +164,6 @@ a:hover {
   flex: 1;
   margin-left: 260px;
   padding: 40px 48px;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
   background: var(--bg);
 }
 
@@ -413,11 +407,6 @@ textarea.input {
 /* ---- RESPONSIVE ---- */
 @media (max-width: 1200px) {
 
-  /* Paint the root background black on mobile to blend the iOS safe area bottom gap */
-  html, body {
-    background-color: var(--black);
-  }
-
   /* Sidebar becomes bottom navigation */
   .app-layout {
     flex-direction: column;
@@ -433,7 +422,8 @@ textarea.input {
     flex-direction: row;
     justify-content: space-around;
     align-items: center;
-    padding: 0 16px;
+    /* Extend the bottom padding safely using iOS env variables so the black bar touches the absolute bottom edge of the screen */
+    padding: 0 16px calc(8px + env(safe-area-inset-bottom)) 16px;
     z-index: 999;
     background: var(--black);
     border-top: 2px solid var(--gray-800);

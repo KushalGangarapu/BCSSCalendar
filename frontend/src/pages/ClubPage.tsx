@@ -43,7 +43,7 @@ export const ClubPage = () => {
             });
     }, [params.id]);
 
-    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '50vh' }}><div className="loading-spinner" /></div>;
+    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '100vh', width: '100%' }}><div className="loading-spinner" /></div>;
     if (!club || club.error) return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Club not found</h2><button onClick={() => navigate('/clubs')} className="btn btn-ghost">Back to Directory</button></div>;
 
     return (

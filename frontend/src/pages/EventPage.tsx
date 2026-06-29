@@ -24,7 +24,7 @@ export const EventPage = () => {
             });
     }, [params.id]);
 
-    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '50vh' }}><div className="loading-spinner" /></div>;
+    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '100vh', width: '100%' }}><div className="loading-spinner" /></div>;
     if (!event || event.error) return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Event not found</h2><button onClick={() => navigate('/calendar')} className="btn btn-ghost">Back to Calendar</button></div>;
 
     return (
