@@ -413,9 +413,9 @@ textarea.input {
   }
 
   .sidebar {
-    position: fixed;
-    top: auto;
+    position: sticky;
     bottom: 0;
+    order: 2;
     left: 0;
     width: 100%;
     height: auto;
@@ -480,10 +480,10 @@ textarea.input {
     /* Hide 'Admin Login' text */
   }
 
-  /* Main content area needs bottom padding for the fixed nav */
+  /* Main content area no longer needs huge bottom padding since the nav is in the sticky document flow */
   .main {
     margin-left: 0;
-    padding: 24px 16px calc(160px + env(safe-area-inset-bottom, 0px)) 16px;
+    padding: 24px 16px 24px 16px;
   }
 
   /* Dashboard Stat Cards — only target the homepage stat card grid */
@@ -586,5 +586,74 @@ textarea.input {
 
   .main {
     padding-bottom: 80px;
+  }
+}
+
+/* ---- SHIMMER ANIMATION FOR LOADING SKELETONS ---- */
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    var(--gray-200) 25%,
+    var(--gray-100) 37%,
+    var(--gray-200) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer-swipe 1.4s ease infinite;
+}
+
+@keyframes shimmer-swipe {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Spinner Rotate Keyframes */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+/* Hide print layout on standard web screen view */
+#print-schedule-section {
+  display: none;
+}
+
+/* Print styles */
+@media print {
+  #root, .app-layout, .sidebar, .main, button, .pill, .input, .toast, .modal, .loading-spinner {
+    display: none !important;
+  }
+
+  #print-schedule-section {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0;
+    margin: 0;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

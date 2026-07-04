@@ -71,7 +71,8 @@ export const AdminDashboard = () => {
     }, [navigate]);
 
     const loadEvents = () => {
-        fetch(`${import.meta.env.VITE_API_URL}/api/events`).then(r => r.json())
+        // Only upcoming / still-live events — past ones belong on the public calendar only
+        fetch(`${import.meta.env.VITE_API_URL}/api/events?range=upcoming`).then(r => r.json())
             .then(data => setEvents(data))
             .catch(console.error);
     };
@@ -425,40 +426,96 @@ export const AdminDashboard = () => {
                         </div>
                     </form>
 
-                    <div style={{ marginTop: '40px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
-                            <CalIcon size={20} style={{ color: 'var(--red)' }} />
-                            <h2 style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0 }}>All Upcoming Events ({events.length})</h2>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
-                            {events.map((event, idx) => {
-                                const d = new Date(event.date);
-                                return (
-                                    <div key={event.id || idx} className="card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-                                                <span style={{ wordBreak: 'break-word' }}>{event.title}</span>
-                                                {event.tags && event.tags.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                        {event.tags.map((t: string) => <span key={t} style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'var(--gray-200)', borderRadius: '4px', whiteSpace: 'nowrap' }}>{t}</span>)}
+                    {(() => {
+                        const now = new Date();
+                        const upcomingEvents = events.filter(e => {
+                            const start = new Date(e.date);
+                            const end = e.endDate ? new Date(e.endDate) : null;
+                            if (end) {
+                                return end >= now;
+                            } else {
+                                const oneHourLater = new Date(start.getTime() + 60 * 60 * 1000);
+                                return oneHourLater >= now;
+                            }
+                        });
+
+                        const getEventCategoryColor = (event: any) => {
+                            const clubCat = event.club?.category;
+                            const matched = categories.find(c => c.name === clubCat);
+                            if (matched) return matched.color;
+
+                            if (event.tags && event.tags.length > 0) {
+                                for (const tag of event.tags) {
+                                    const tagMatched = categories.find(c => c.name === tag);
+                                    if (tagMatched) return tagMatched.color;
+                                }
+                            }
+                            return 'var(--red)';
+                        };
+
+                        return (
+                            <div style={{ marginTop: '40px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+                                    <CalIcon size={20} style={{ color: 'var(--red)' }} />
+                                    <h2 style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0 }}>All Upcoming Events ({upcomingEvents.length})</h2>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto', padding: '2px' }}>
+                                    {upcomingEvents.map((event, idx) => {
+                                        const d = new Date(event.date);
+                                        const categoryColor = getEventCategoryColor(event);
+                                        return (
+                                            <div key={event.id || idx} className="card card-hover" style={{
+                                                padding: '14px 18px',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                gap: '12px',
+                                                borderLeft: `4px solid ${categoryColor}`,
+                                                background: 'var(--surface)',
+                                                borderTop: '1px solid var(--border)',
+                                                borderRight: '1px solid var(--border)',
+                                                borderBottom: '1px solid var(--border)',
+                                                transition: 'all 0.2s ease',
+                                            }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(0,0,0,0.06)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                                            >
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: 700, fontSize: '0.94rem', fontFamily: 'var(--font-display)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                                                        <span style={{ wordBreak: 'break-word' }}>{event.title}</span>
+                                                        {event.tags && event.tags.length > 0 && (
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                                {event.tags.map((t: string) => (
+                                                                    <span key={t} style={{
+                                                                        fontSize: '0.62rem',
+                                                                        padding: '2px 6px',
+                                                                        background: 'rgba(0,0,0,0.05)',
+                                                                        borderRadius: '4px',
+                                                                        whiteSpace: 'nowrap',
+                                                                        color: 'var(--text-secondary)',
+                                                                        fontWeight: 600
+                                                                    }}>{t}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-word' }}>
+                                                        {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{event.endDate ? ` – ${new Date(event.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''} · <span style={{ color: 'var(--text)', fontWeight: 600 }}>{event.club?.name || 'School Event'}</span>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => handleDeleteEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)', flexShrink: 0 }} title="Delete">
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-word' }}>
-                                                {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{event.endDate ? ` – ${new Date(event.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => handleDeleteEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)', flexShrink: 0 }} title="Delete">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                            {events.length === 0 && (
-                                <div className="card" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>No events scheduled</div>
-                            )}
-                        </div>
-                    </div>
+                                        );
+                                    })}
+                                    {upcomingEvents.length === 0 && (
+                                        <div className="card" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>No events scheduled</div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 

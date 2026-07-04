@@ -8,6 +8,7 @@ import { AdminPortal } from './pages/AdminPortal';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { EventPage } from './pages/EventPage';
 import { ClubPage } from './pages/ClubPage';
+import { PwaInstallBanner } from './components/PwaInstallBanner';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
             </Routes>
           </main>
+          <PwaInstallBanner />
         </div>
       </ToastProvider>
     </Router>

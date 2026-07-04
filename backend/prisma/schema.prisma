@@ -52,6 +52,9 @@ model Event {
   tags        String[] @default([])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([clubId])
 }
 
 model Metrics {

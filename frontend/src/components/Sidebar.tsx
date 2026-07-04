@@ -14,7 +14,7 @@ export const Sidebar = () => {
         <aside className="sidebar">
             {/* Logo */}
             <div style={{ padding: '28px 24px', display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <img src="/wildcat-logo.png" alt="BCSS Wildcats" style={{ width: '44px', height: '44px', objectFit: 'contain' }} />
+                <img src="/cropped-wildcat-logo.png" alt="BCSS Wildcats" style={{ width: '44px', height: '44px', objectFit: 'contain' }} />
                 <div>
                     <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>BCSS</div>
                     <div style={{ fontSize: '0.65rem', color: 'var(--gray-500)', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>Wildcats</div>

@@ -7,7 +7,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['wildcat-logo.png'],
+      injectRegister: 'inline',
+      includeAssets: ['cropped-wildcat-logo.png'],
+      devOptions: {
+        enabled: true
+      },
       workbox: {
         navigateFallback: '/index.html',
         navigateFallbackAllowlist: [/^(?!\/(api|_)).*$/],
@@ -25,12 +29,12 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-            src: '/wildcat-logo.png',
+            src: '/cropped-wildcat-logo.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/wildcat-logo.png',
+            src: '/cropped-wildcat-logo.png',
             sizes: '512x512',
             type: 'image/png'
           }

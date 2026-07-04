@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, Tag } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Tag, ChevronDown } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Helmet } from 'react-helmet-async';
+import { generateGoogleCalendarUrl, downloadIcsFile } from '../utils/calendarExport';
 
 export const EventPage = () => {
     const params = useParams();
     const navigate = useNavigate();
     const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
 
     useEffect(() => {
         if (!params.id) return;
@@ -50,24 +52,97 @@ export const EventPage = () => {
                         {event.title}
                     </h1>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                            <Calendar size={20} className="text-red" />
-                            <span style={{ fontWeight: 500 }}>{format(parseISO(event.date), 'EEEE, MMMM do, yyyy')}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                            <Clock size={20} className="text-red" />
-                            <span style={{ fontWeight: 500 }}>
-                                {format(parseISO(event.date), 'h:mm a')}
-                                {event.endDate && ` – ${format(parseISO(event.endDate), 'h:mm a')}`}
-                            </span>
-                        </div>
-                        {event.club && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid var(--border)', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                                <Tag size={20} className="text-red" />
-                                <span style={{ fontWeight: 500 }}>Hosted by: <button onClick={() => navigate(`/clubs/${event.club.id}`)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font)' }}>{event.club.name}</button></span>
+                                <Calendar size={20} className="text-red" />
+                                <span style={{ fontWeight: 500 }}>{format(parseISO(event.date), 'EEEE, MMMM do, yyyy')}</span>
                             </div>
-                        )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                                <Clock size={20} className="text-red" />
+                                <span style={{ fontWeight: 500 }}>
+                                    {format(parseISO(event.date), 'h:mm a')}
+                                    {event.endDate && ` – ${format(parseISO(event.endDate), 'h:mm a')}`}
+                                </span>
+                            </div>
+                            {event.club && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                                    <Tag size={20} className="text-red" />
+                                    <span style={{ fontWeight: 500 }}>Hosted by: <button onClick={() => navigate(`/clubs/${event.club.id}`)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '1.05rem', fontFamily: 'var(--font)' }}>{event.club.name}</button></span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ position: 'relative' }}>
+                            <button 
+                                onClick={() => setShowExportDropdown(!showExportDropdown)}
+                                className="btn btn-outline"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    background: showExportDropdown ? 'var(--gray-100)' : 'transparent',
+                                    padding: '8px 16px',
+                                    fontSize: '0.88rem',
+                                }}
+                            >
+                                <Calendar size={16} /> Add to Calendar <ChevronDown size={14} style={{ transform: showExportDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                            </button>
+                            {showExportDropdown && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    right: 0,
+                                    marginTop: '8px',
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 'var(--radius-md)',
+                                    boxShadow: 'var(--shadow-lg)',
+                                    zIndex: 10,
+                                    overflow: 'hidden',
+                                    minWidth: '220px',
+                                    animation: 'fadeUp 0.15s ease both',
+                                }}>
+                                    <a 
+                                        href={generateGoogleCalendarUrl(event)} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        onClick={() => setShowExportDropdown(false)}
+                                        style={{
+                                            display: 'block',
+                                            padding: '12px 16px',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            color: 'var(--text)',
+                                            textDecoration: 'none',
+                                            transition: 'background 0.2s ease',
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid var(--border)',
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-100)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        Google Calendar (Web/Mobile)
+                                    </a>
+                                    <div 
+                                        onClick={() => { downloadIcsFile(event); setShowExportDropdown(false); }}
+                                        style={{
+                                            display: 'block',
+                                            padding: '12px 16px',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            color: 'var(--text)',
+                                            transition: 'background 0.2s ease',
+                                            cursor: 'pointer',
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-100)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        Apple / Outlook Calendar (.ics)
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div>

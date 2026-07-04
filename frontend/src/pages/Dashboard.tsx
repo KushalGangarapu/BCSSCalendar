@@ -46,6 +46,7 @@ export const Dashboard = () => {
     const [metrics, setMetrics] = useState<{ pageVisits?: number; clubCount?: number; eventCount?: number }>({});
     const [events, setEvents] = useState<any[]>([]);
     const [clubs, setClubs] = useState<any[]>([]);
+    const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);
     const [followedOnly, setFollowedOnly] = useState(false);
     const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
     const navigate = useNavigate();
@@ -63,7 +64,8 @@ export const Dashboard = () => {
             })
             .catch(console.error);
 
-        fetch(`${import.meta.env.VITE_API_URL}/api/events`)
+        // Upcoming only — past events still appear on the Master Calendar
+        fetch(`${import.meta.env.VITE_API_URL}/api/events?range=upcoming`)
             .then(r => r.json())
             .then(setEvents)
             .catch(console.error);
@@ -71,6 +73,11 @@ export const Dashboard = () => {
         fetch(`${import.meta.env.VITE_API_URL}/api/clubs`)
             .then(r => r.json())
             .then(data => setClubs(data.slice(0, 3)))
+            .catch(console.error);
+
+        fetch(`${import.meta.env.VITE_API_URL}/api/categories`)
+            .then(r => r.json())
+            .then(setCategories)
             .catch(console.error);
 
         const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
@@ -81,8 +88,28 @@ export const Dashboard = () => {
     const upcomingEvents = events.filter(e => {
         const start = new Date(e.date);
         const end = e.endDate ? new Date(e.endDate) : null;
-        return start >= now || (end && end >= now);
+        if (end) {
+            return end >= now;
+        } else {
+            // Live for 60 minutes after start
+            const oneHourLater = new Date(start.getTime() + 60 * 60 * 1000);
+            return oneHourLater >= now;
+        }
     });
+
+    const getEventCategoryColor = (event: any) => {
+        const clubCat = event.club?.category;
+        const matched = categories.find(c => c.name === clubCat);
+        if (matched) return matched.color;
+
+        if (event.tags && event.tags.length > 0) {
+            for (const tag of event.tags) {
+                const tagMatched = categories.find(c => c.name === tag);
+                if (tagMatched) return tagMatched.color;
+            }
+        }
+        return 'var(--red)';
+    };
 
     const filteredEvents = followedOnly
         ? upcomingEvents.filter(e => followedClubIds.includes(e.clubId))
@@ -186,36 +213,46 @@ export const Dashboard = () => {
                             Your Schedule
                         </button>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {displayEvents.length > 0 ? displayEvents.map((event, idx) => {
                             const isLive = isEventLive(event.date, event.endDate);
                             const d = new Date(event.date);
                             const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
                             const day = d.getDate();
+                            const categoryColor = getEventCategoryColor(event);
                             return (
-                                <div key={idx} onClick={() => navigate(`/events/${event.id}`)} style={{
-                                    display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 0', cursor: 'pointer',
-                                    borderBottom: idx < events.length - 1 ? '1px solid var(--border)' : 'none',
-                                }}>
+                                <div key={event.id || idx} onClick={() => navigate(`/events/${event.id}`)} style={{
+                                    display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 18px', cursor: 'pointer',
+                                    borderLeft: `4px solid ${categoryColor}`,
+                                    background: 'var(--surface)',
+                                    borderRadius: 'var(--radius-md)',
+                                    borderTop: '1px solid var(--border)',
+                                    borderRight: '1px solid var(--border)',
+                                    borderBottom: '1px solid var(--border)',
+                                    transition: 'all 0.2s ease',
+                                }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                                >
                                     <div style={{
-                                        minWidth: '52px', height: '52px', borderRadius: 'var(--radius-md)',
+                                        minWidth: '50px', height: '50px', borderRadius: 'var(--radius-md)',
                                         background: 'var(--black)', color: '#fff', display: 'flex', flexDirection: 'column',
                                         alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)',
                                     }}>
-                                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--red)' }}>{month}</span>
-                                        <span style={{ fontSize: '1.2rem', fontWeight: 800, lineHeight: 1 }}>{day}</span>
+                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', color: categoryColor }}>{month}</span>
+                                        <span style={{ fontSize: '1.15rem', fontWeight: 800, lineHeight: 1 }}>{day}</span>
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{
-                                            fontWeight: 700, fontSize: '0.92rem', fontFamily: 'var(--font-display)',
-                                            display: 'flex', alignItems: 'center', gap: '8px'
+                                            fontWeight: 700, fontSize: '0.94rem', fontFamily: 'var(--font-display)',
+                                            display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'
                                         }}>
                                             {isLive && <span className="glowing-dot" />}
-                                            {event.title}
-                                            {isLive && <span style={{ fontSize: '0.65rem', color: 'var(--red)', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>LIVE</span>}
+                                            <span style={{ wordBreak: 'break-word' }}>{event.title}</span>
+                                            {isLive && <span style={{ fontSize: '0.62rem', color: '#fff', background: 'var(--red)', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, letterSpacing: '0.05em' }}>LIVE</span>}
                                         </div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}{event.endDate ? (() => { const ed = new Date(event.endDate); return d.toDateString() === ed.toDateString() ? ` – ${ed.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}` : ` – ${ed.toLocaleDateString('en', { month: 'long', day: 'numeric' })}`; })() : ''} · <span style={{ color: event.club ? 'var(--text-muted)' : 'var(--red)', fontWeight: event.club ? 500 : 700 }}>{event.club?.name || 'School Event'}</span>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                            {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}{event.endDate ? (() => { const ed = new Date(event.endDate); return d.toDateString() === ed.toDateString() ? ` – ${ed.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}` : ` – ${ed.toLocaleDateString('en', { month: 'long', day: 'numeric' })}`; })() : ''} · <span style={{ color: 'var(--text)', fontWeight: 600 }}>{event.club?.name || 'School Event'}</span>
                                         </div>
                                     </div>
                                 </div>

@@ -138,7 +138,7 @@ export const ClubsDirectory = () => {
             {loading ? (
                 <div className="clubs-grid">
                     {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                        <div key={i} style={{ height: '340px', borderRadius: 'var(--radius-lg)', background: 'var(--gray-200)' }} />
+                        <div key={i} className="shimmer-bg" style={{ height: '340px', borderRadius: 'var(--radius-lg)' }} />
                     ))}
                 </div>
             ) : filtered.length > 0 ? (

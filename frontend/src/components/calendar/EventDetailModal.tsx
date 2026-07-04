@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { format, parseISO, isSameDay } from 'date-fns';
-import { X, Clock, ExternalLink } from 'lucide-react';
+import { X, Clock, ExternalLink, Calendar, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { generateGoogleCalendarUrl, downloadIcsFile } from '../../utils/calendarExport';
 
 interface EventDetailModalProps {
     event: any;
@@ -11,6 +13,7 @@ interface EventDetailModalProps {
 
 export const EventDetailModal = ({ event, onClose, categories = [], categoryColor }: EventDetailModalProps) => {
     const navigate = useNavigate();
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
 
     if (!event) return null;
 
@@ -94,6 +97,77 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                         <button onClick={() => navigate(`/clubs/${event.clubId}`)} className="btn btn-outline" style={{ flex: 1 }}>
                             View Club
                         </button>
+                    )}
+                </div>
+
+                <div style={{ marginTop: '12px', position: 'relative' }}>
+                    <button 
+                        onClick={() => setShowExportDropdown(!showExportDropdown)} 
+                        className="btn btn-outline" 
+                        style={{ 
+                            width: '100%', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            gap: '8px',
+                            background: showExportDropdown ? 'var(--gray-100)' : 'transparent',
+                        }}
+                    >
+                        <Calendar size={16} /> Add to Calendar <ChevronDown size={14} style={{ transform: showExportDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                    </button>
+                    {showExportDropdown && (
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '100%',
+                            left: 0,
+                            right: 0,
+                            marginBottom: '8px',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: 'var(--radius-md)',
+                            boxShadow: 'var(--shadow-md)',
+                            zIndex: 10,
+                            overflow: 'hidden',
+                            animation: 'fadeUp 0.15s ease both',
+                        }}>
+                            <a 
+                                href={generateGoogleCalendarUrl(event)} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                onClick={() => setShowExportDropdown(false)}
+                                style={{
+                                    display: 'block',
+                                    padding: '10px 16px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    color: 'var(--text)',
+                                    textDecoration: 'none',
+                                    transition: 'background 0.2s ease',
+                                    cursor: 'pointer',
+                                    borderBottom: '1px solid var(--border)',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-100)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                                Google Calendar (Web/Mobile)
+                            </a>
+                            <div 
+                                onClick={() => { downloadIcsFile(event); setShowExportDropdown(false); }}
+                                style={{
+                                    display: 'block',
+                                    padding: '10px 16px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    color: 'var(--text)',
+                                    transition: 'background 0.2s ease',
+                                    cursor: 'pointer',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-100)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                                Apple / Outlook Calendar (.ics)
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
