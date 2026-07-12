@@ -35,7 +35,7 @@ export default defineConfig({
                      !url.pathname.includes('/auth/') && 
                      !url.pathname.includes('/metrics/visit');
             },
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
               expiration: {

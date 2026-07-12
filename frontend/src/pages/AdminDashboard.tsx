@@ -73,20 +73,20 @@ export const AdminDashboard = () => {
 
     const loadEvents = () => {
         // Only upcoming / still-live events — past ones belong on the public calendar only
-        fetch(`${import.meta.env.VITE_API_URL}/api/events?range=upcoming`).then(r => r.json())
+        fetch(`${import.meta.env.VITE_API_URL}/api/events?range=upcoming&_t=${Date.now()}`).then(r => r.json())
             .then(data => setEvents(data))
             .catch(console.error);
     };
 
     const loadClubs = () => {
-        fetch(`${import.meta.env.VITE_API_URL}/api/clubs`).then(r => r.json())
+        fetch(`${import.meta.env.VITE_API_URL}/api/clubs?_t=${Date.now()}`).then(r => r.json())
             .then(data => {
                 setClubs(data);
                 if (data.length > 0 && !clubId) setClubId(data[0].id);
             })
             .catch(console.error);
 
-        fetch(`${import.meta.env.VITE_API_URL}/api/categories`).then(r => r.json())
+        fetch(`${import.meta.env.VITE_API_URL}/api/categories?_t=${Date.now()}`).then(r => r.json())
             .then(data => setCategories(data))
             .catch(console.error);
     };
@@ -148,7 +148,13 @@ export const AdminDashboard = () => {
         }
 
         const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${event.id}?allFuture=${allFuture}`, { method: 'DELETE', credentials: 'include' });
-        if (r.ok) { toast(allFuture ? 'Event series deleted' : 'Event deleted'); loadEvents(); }
+        if (r.ok) {
+            toast(allFuture ? 'Event series deleted' : 'Event deleted');
+            if (editingEvent && (editingEvent.id === event.id || allFuture)) {
+                resetEventForm();
+            }
+            loadEvents();
+        }
         else toast('Failed to delete', 'error');
     };
 
