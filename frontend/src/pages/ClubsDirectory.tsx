@@ -142,7 +142,7 @@ export const ClubsDirectory = () => {
                     ))}
                 </div>
             ) : filtered.length > 0 ? (
-                <div className="clubs-grid" style={{ animation: 'fadeUp 0.4s ease 0.15s both' }}>
+                <div key={`${category || 'all'}-${search}`} className="clubs-grid" style={{ animation: 'fadeUp 0.4s ease 0.15s both' }}>
                     {filtered.map((club, idx) => (
                         <div key={club.id} className="card card-hover" onClick={() => navigate(`/clubs/${club.id}`)} style={{
                             display: 'flex', flexDirection: 'column',

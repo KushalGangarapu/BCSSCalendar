@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
+import { clearDashboardCache, getCachedDashboard, setCachedDashboard } from '../utils/cache';
 
 export const getClubs = async (req: Request, res: Response) => {
     try {
@@ -48,6 +49,7 @@ export const createClub = async (req: Request, res: Response) => {
         const club = await prisma.club.create({
             data: { name, category, description, instagram, discord, imageUrl: imageUrl || null },
         });
+        clearDashboardCache();
         res.status(201).json(club);
     } catch (error: any) {
         if (error.code === 'P2002') {
@@ -82,6 +84,7 @@ export const updateClub = async (req: Request, res: Response) => {
                 imageUrl: (imageUrl as string) || null,
             },
         });
+        clearDashboardCache();
         res.json(club);
     } catch (error: any) {
         if (error.code === 'P2025') return res.status(404).json({ error: 'Club not found' });
@@ -95,6 +98,7 @@ export const deleteClub = async (req: Request, res: Response) => {
         // Delete associated events first
         await prisma.event.deleteMany({ where: { clubId: id as string } });
         await prisma.club.delete({ where: { id } });
+        clearDashboardCache();
         res.json({ message: 'Club deleted' });
     } catch (error: any) {
         if (error.code === 'P2025') return res.status(404).json({ error: 'Club not found' });
@@ -120,6 +124,7 @@ export const deleteCategory = async (req: Request, res: Response) => {
         await prisma.event.deleteMany({ where: { clubId: { in: clubIds } } });
         await prisma.club.deleteMany({ where: { category: categoryName } });
         await prisma.category.delete({ where: { name: categoryName } });
+        clearDashboardCache();
 
         res.json({ message: 'Category deleted' });
     } catch (error) {
@@ -140,6 +145,7 @@ export const updateCategoryColor = async (req: Request, res: Response) => {
             where: { name: categoryName },
             data: { color }
         });
+        clearDashboardCache();
 
         res.json(category);
     } catch (error) {
@@ -201,5 +207,77 @@ export const incrementSignups = async (req: Request, res: Response) => {
         res.json({ message: 'Signups incremented' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to update metrics' });
+    }
+};
+
+export const getDashboardData = async (req: Request, res: Response) => {
+    try {
+        const now = Date.now();
+        const cached = getCachedDashboard(now);
+        if (cached) {
+            res.json(cached);
+            return;
+        }
+
+        const oneHourAgo = new Date(now - 60 * 60 * 1000);
+        const today = new Date(now);
+
+        const [metrics, clubs, events, categories] = await Promise.all([
+            // 1. Metrics
+            Promise.all([
+                prisma.metrics.findFirst(),
+                prisma.club.count(),
+                prisma.event.count({
+                    where: {
+                        OR: [
+                            { date: { gte: today } },
+                            { endDate: { gte: today } },
+                        ],
+                    },
+                }),
+            ]).then(([m, cc, ec]) => ({
+                pageVisits: m?.activeUsers || 0,
+                clubCount: cc,
+                eventCount: ec,
+            })),
+
+            // 2. Clubs (featured)
+            prisma.club.findMany({
+                orderBy: { name: 'asc' },
+                take: 3,
+            }),
+
+            // 3. Upcoming Events
+            prisma.event.findMany({
+                where: {
+                    OR: [
+                        { date: { gte: oneHourAgo } },
+                        { endDate: { gte: today } },
+                    ],
+                },
+                include: { club: true },
+                orderBy: { date: 'asc' },
+                take: 10,
+            }),
+
+            // 4. Categories
+            prisma.category.findMany({
+                orderBy: { name: 'asc' },
+            }),
+        ]);
+
+        const dashboardData = {
+            metrics,
+            clubs,
+            events,
+            categories,
+        };
+
+        setCachedDashboard(dashboardData, now);
+
+        res.json(dashboardData);
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        res.status(500).json({ error: 'Failed to fetch dashboard data' });
     }
 };

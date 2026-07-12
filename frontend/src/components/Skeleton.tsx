@@ -51,3 +51,24 @@ export const SkeletonClubDetail = () => (
         </div>
     </div>
 );
+
+export const SkeletonEventItem = () => (
+    <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        padding: '14px 18px',
+        borderLeft: '4px solid var(--gray-300)',
+        background: 'var(--surface)',
+        borderRadius: 'var(--radius-md)',
+        borderTop: '1px solid var(--border)',
+        borderRight: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)',
+    }}>
+        <SkeletonLine width="50px" height="50px" borderRadius="var(--radius-md)" />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <SkeletonLine width="55%" height="16px" />
+            <SkeletonLine width="35%" height="12px" />
+        </div>
+    </div>
+);

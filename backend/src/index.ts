@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import compression from 'compression';
 import apiRoutes from './routes/api';
 
 dotenv.config();
@@ -11,6 +12,7 @@ const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Middleware
+app.use(compression());
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({

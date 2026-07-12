@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { addWeeks, addMonths } from 'date-fns';
+import { clearDashboardCache } from '../utils/cache';
 
 const VALID_RECURRING = ['weekly', 'biweekly', 'monthly'] as const;
 type Recurring = (typeof VALID_RECURRING)[number];
@@ -108,6 +109,7 @@ export const createEvent = async (req: Request, res: Response) => {
         });
 
         await prisma.event.createMany({ data: newEvents });
+        clearDashboardCache();
 
         res.status(201).json({ message: 'Event(s) created successfully', count: newEvents.length });
     } catch (error) {
@@ -139,6 +141,7 @@ export const deleteEvent = async (req: Request, res: Response) => {
         } else {
             await prisma.event.delete({ where: { id: id as string } });
         }
+        clearDashboardCache();
         res.json({ message: 'Event deleted successfully' });
     } catch (error) {
         console.error('Error deleting event:', error);

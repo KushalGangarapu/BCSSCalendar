@@ -1,7 +1,7 @@
 import express from 'express';
 import { login, logout, verifySession } from '../controllers/authController';
 import { getEvents, createEvent, deleteEvent, getEventById } from '../controllers/eventsController';
-import { getClubs, createClub, updateClub, deleteClub, getCategories, deleteCategory, updateCategoryColor, getMetrics, incrementVisits, incrementSignups, getClubById } from '../controllers/contentController';
+import { getClubs, createClub, updateClub, deleteClub, getCategories, deleteCategory, updateCategoryColor, getMetrics, incrementVisits, incrementSignups, getClubById, getDashboardData } from '../controllers/contentController';
 import { requireAuth } from '../middleware/authMiddleware';
 import { trackDevice, loginRateLimiter } from '../middleware/rateLimiter';
 
@@ -13,6 +13,7 @@ router.post('/auth/logout', logout);
 router.get('/auth/verify', verifySession);
 
 // Public content routes
+router.get('/dashboard', getDashboardData);
 router.get('/clubs', getClubs);
 router.get('/categories', getCategories);
 router.get('/clubs/:id', getClubById);

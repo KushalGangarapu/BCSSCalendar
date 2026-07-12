@@ -3,6 +3,7 @@ import { Eye, Calendar, Users, ArrowRight, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { isEventLive } from '../utils/timeUtils';
+import { SkeletonClubCard, SkeletonEventItem } from '../components/Skeleton';
 
 interface StatCardProps {
     icon: any;
@@ -49,36 +50,30 @@ export const Dashboard = () => {
     const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);
     const [followedOnly, setFollowedOnly] = useState(false);
     const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_API_URL}/api/metrics`)
-            .then(r => r.json())
+        setLoading(true);
+        fetch(`${import.meta.env.VITE_API_URL}/api/dashboard`)
+            .then(r => {
+                if (!r.ok) throw new Error('Failed to fetch dashboard data');
+                return r.json();
+            })
             .then(data => {
-                setMetrics(data);
+                setMetrics(data.metrics || {});
+                setEvents(data.events || []);
+                setClubs(data.clubs || []);
+                setCategories(data.categories || []);
+
                 const visitKey = 'bcss_has_visited_v2';
                 if (!localStorage.getItem(visitKey)) {
-                    fetch(`${import.meta.env.VITE_API_URL}/api/metrics/visit`, { method: 'POST' });
+                    fetch(`${import.meta.env.VITE_API_URL}/api/metrics/visit`, { method: 'POST' }).catch(console.error);
                     localStorage.setItem(visitKey, 'true');
                 }
             })
-            .catch(console.error);
-
-        // Upcoming only — past events still appear on the Master Calendar
-        fetch(`${import.meta.env.VITE_API_URL}/api/events?range=upcoming`)
-            .then(r => r.json())
-            .then(setEvents)
-            .catch(console.error);
-
-        fetch(`${import.meta.env.VITE_API_URL}/api/clubs`)
-            .then(r => r.json())
-            .then(data => setClubs(data.slice(0, 3)))
-            .catch(console.error);
-
-        fetch(`${import.meta.env.VITE_API_URL}/api/categories`)
-            .then(r => r.json())
-            .then(setCategories)
-            .catch(console.error);
+            .catch(console.error)
+            .finally(() => setLoading(false));
 
         const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
         setFollowedClubIds(followed);
@@ -173,21 +168,24 @@ export const Dashboard = () => {
                         <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)' }}>Featured Clubs</h2>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {clubs.map(club => (
-                            <div key={club.id} className="card card-hover" onClick={() => navigate(`/clubs/${club.id}`)} style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', gap: '16px' }}>
-                                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-                                    <div style={{ fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font-display)', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{club.name}</div>
-                                    <div style={{
-                                        fontSize: '0.82rem', color: 'var(--text-muted)',
-                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                    }}>{club.category}</div>
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, i) => <SkeletonClubCard key={i} />)
+                        ) : clubs.length > 0 ? (
+                            clubs.map(club => (
+                                <div key={club.id} className="card card-hover" onClick={() => navigate(`/clubs/${club.id}`)} style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', gap: '16px' }}>
+                                    <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                        <div style={{ fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font-display)', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{club.name}</div>
+                                        <div style={{
+                                            fontSize: '0.82rem', color: 'var(--text-muted)',
+                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                        }}>{club.category}</div>
+                                    </div>
+                                    <button className="btn btn-red" style={{ padding: '6px 16px', fontSize: '0.8rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                        View
+                                    </button>
                                 </div>
-                                <button className="btn btn-red" style={{ padding: '6px 16px', fontSize: '0.8rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    View
-                                </button>
-                            </div>
-                        ))}
-                        {clubs.length === 0 && (
+                            ))
+                        ) : (
                             <div className="card" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>No clubs yet</div>
                         )}
                     </div>
@@ -214,50 +212,54 @@ export const Dashboard = () => {
                         </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {displayEvents.length > 0 ? displayEvents.map((event, idx) => {
-                            const isLive = isEventLive(event.date, event.endDate);
-                            const d = new Date(event.date);
-                            const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
-                            const day = d.getDate();
-                            const categoryColor = getEventCategoryColor(event);
-                            return (
-                                <div key={event.id || idx} onClick={() => navigate(`/events/${event.id}`)} style={{
-                                    display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 18px', cursor: 'pointer',
-                                    borderLeft: `4px solid ${categoryColor}`,
-                                    background: 'var(--surface)',
-                                    borderRadius: 'var(--radius-md)',
-                                    borderTop: '1px solid var(--border)',
-                                    borderRight: '1px solid var(--border)',
-                                    borderBottom: '1px solid var(--border)',
-                                    transition: 'all 0.2s ease',
-                                }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
-                                >
-                                    <div style={{
-                                        minWidth: '50px', height: '50px', borderRadius: 'var(--radius-md)',
-                                        background: 'var(--black)', color: '#fff', display: 'flex', flexDirection: 'column',
-                                        alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)',
-                                    }}>
-                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', color: categoryColor }}>{month}</span>
-                                        <span style={{ fontSize: '1.15rem', fontWeight: 800, lineHeight: 1 }}>{day}</span>
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
+                        {loading ? (
+                            Array.from({ length: 5 }).map((_, i) => <SkeletonEventItem key={i} />)
+                        ) : displayEvents.length > 0 ? (
+                            displayEvents.map((event, idx) => {
+                                const isLive = isEventLive(event.date, event.endDate);
+                                const d = new Date(event.date);
+                                const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
+                                const day = d.getDate();
+                                const categoryColor = getEventCategoryColor(event);
+                                return (
+                                    <div key={event.id || idx} onClick={() => navigate(`/events/${event.id}`)} style={{
+                                        display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 18px', cursor: 'pointer',
+                                        borderLeft: `4px solid ${categoryColor}`,
+                                        background: 'var(--surface)',
+                                        borderRadius: 'var(--radius-md)',
+                                        borderTop: '1px solid var(--border)',
+                                        borderRight: '1px solid var(--border)',
+                                        borderBottom: '1px solid var(--border)',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                                    >
                                         <div style={{
-                                            fontWeight: 700, fontSize: '0.94rem', fontFamily: 'var(--font-display)',
-                                            display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'
+                                            minWidth: '50px', height: '50px', borderRadius: 'var(--radius-md)',
+                                            background: 'var(--black)', color: '#fff', display: 'flex', flexDirection: 'column',
+                                            alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)',
                                         }}>
-                                            {isLive && <span className="glowing-dot" />}
-                                            <span style={{ wordBreak: 'break-word' }}>{event.title}</span>
-                                            {isLive && <span style={{ fontSize: '0.62rem', color: '#fff', background: 'var(--red)', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, letterSpacing: '0.05em' }}>LIVE</span>}
+                                            <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', color: categoryColor }}>{month}</span>
+                                            <span style={{ fontSize: '1.15rem', fontWeight: 800, lineHeight: 1 }}>{day}</span>
                                         </div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                            {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}{event.endDate ? (() => { const ed = new Date(event.endDate); return d.toDateString() === ed.toDateString() ? ` – ${ed.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}` : ` – ${ed.toLocaleDateString('en', { month: 'long', day: 'numeric' })}`; })() : ''} · <span style={{ color: 'var(--text)', fontWeight: 600 }}>{event.club?.name || 'School Event'}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{
+                                                fontWeight: 700, fontSize: '0.94rem', fontFamily: 'var(--font-display)',
+                                                display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'
+                                            }}>
+                                                {isLive && <span className="glowing-dot" />}
+                                                <span style={{ wordBreak: 'break-word' }}>{event.title}</span>
+                                                {isLive && <span style={{ fontSize: '0.62rem', color: '#fff', background: 'var(--red)', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, letterSpacing: '0.05em' }}>LIVE</span>}
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}{event.endDate ? (() => { const ed = new Date(event.endDate); return d.toDateString() === ed.toDateString() ? ` – ${ed.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}` : ` – ${ed.toLocaleDateString('en', { month: 'long', day: 'numeric' })}`; })() : ''} · <span style={{ color: 'var(--text)', fontWeight: 600 }}>{event.club?.name || 'School Event'}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        }) : (
+                                );
+                            })
+                        ) : (
                             <div className="card" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
                                 No upcoming events
                             </div>

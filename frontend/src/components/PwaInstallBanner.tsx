@@ -1,12 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Download, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export const PwaInstallBanner = () => {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        const handler = (e: any) => {
+        const checkStandalone = () => {
+            const isStandalone = 
+                window.matchMedia('(display-mode: standalone)').matches ||
+                window.matchMedia('(display-mode: minimal-ui)').matches ||
+                window.matchMedia('(display-mode: fullscreen)').matches ||
+                (window.navigator as any).standalone === true ||
+                document.referrer.includes('android-app://');
+            return isStandalone;
+        };
+
+        if (checkStandalone()) {
+            setIsVisible(false);
+            return;
+        }
+
+        const promptHandler = (e: any) => {
             e.preventDefault();
             setDeferredPrompt(e);
             
@@ -16,14 +31,18 @@ export const PwaInstallBanner = () => {
             }
         };
 
-        window.addEventListener('beforeinstallprompt', handler);
-
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-        if (isStandalone) {
+        const installHandler = () => {
             setIsVisible(false);
-        }
+            setDeferredPrompt(null);
+        };
 
-        return () => window.removeEventListener('beforeinstallprompt', handler);
+        window.addEventListener('beforeinstallprompt', promptHandler);
+        window.addEventListener('appinstalled', installHandler);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', promptHandler);
+            window.removeEventListener('appinstalled', installHandler);
+        };
     }, []);
 
     const handleInstallClick = async () => {
@@ -45,44 +64,24 @@ export const PwaInstallBanner = () => {
     if (!isVisible) return null;
 
     return (
-        <div style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            zIndex: 9999,
-            background: 'var(--black)',
-            color: '#fff',
-            padding: '16px 20px',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            maxWidth: '380px',
-            animation: 'fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
-            border: '1px solid var(--gray-800)',
-        }}>
-            <div style={{
-                width: '40px', height: '40px', borderRadius: '50%',
-                background: 'rgba(211,47,47,0.15)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', flexShrink: 0
-            }}>
-                <Download size={20} style={{ color: 'var(--red)' }} />
+        <div className="pwa-banner">
+            <div className="pwa-banner-logo">
+                <img src="/cropped-wildcat-logo.png" alt="Wildcats logo" />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
+            <div className="pwa-banner-content">
+                <div className="pwa-banner-title">
                     Install Wildcat Calendar
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginTop: '2px', lineHeight: 1.3 }}>
+                <div className="pwa-banner-desc">
                     Add this app to your home screen for quick access and offline browsing.
                 </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                <button onClick={handleInstallClick} className="btn btn-red" style={{ padding: '6px 12px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+            <div className="pwa-banner-actions">
+                <button onClick={handleInstallClick} className="pwa-banner-btn-install">
                     Install
                 </button>
-                <button onClick={handleDismiss} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                    <X size={10} /> Dismiss
+                <button onClick={handleDismiss} className="pwa-banner-btn-dismiss">
+                    <X size={11} /> Dismiss
                 </button>
             </div>
         </div>
