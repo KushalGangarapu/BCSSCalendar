@@ -23,7 +23,7 @@ The system is designed from the ground up to solve a real-world problem: replaci
 
 ### ⚙️ Recurrence Engine & Database Relations
 *   **Automatic Recurrence Spawning:** When administrators create recurring events (weekly, bi-weekly, or monthly), the backend calculates future dates using `date-fns` (weekly runs for 16 weeks, bi-weekly for 8, monthly for 4) and writes them to the database as distinct relational entities.
-*   **Smart Relational Deletion:** When modifying or deleting an event, the system prompts the administrator to either edit/delete that specific instance or automatically cascade changes to all future instances in the recurrence series.
+*   **Smart Relational Updates & Deletion:** When editing or deleting a recurring event, the system prompts the administrator to either modify/delete that specific instance or automatically cascade changes (such as title, description, tags, or shifted dates/times) to all future instances in the recurrence series.
 
 ### 📱 Progressive Web App (PWA) Integration
 *   **Installed Application Experience:** Fully installable on iOS, Android, macOS, and Windows with a standalone display mode and custom branding icons.

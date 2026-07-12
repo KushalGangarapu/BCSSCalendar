@@ -1,6 +1,6 @@
 import express from 'express';
 import { login, logout, verifySession } from '../controllers/authController';
-import { getEvents, createEvent, deleteEvent, getEventById } from '../controllers/eventsController';
+import { getEvents, createEvent, deleteEvent, getEventById, updateEvent } from '../controllers/eventsController';
 import { getClubs, createClub, updateClub, deleteClub, getCategories, deleteCategory, updateCategoryColor, getMetrics, incrementVisits, incrementSignups, getClubById, getDashboardData } from '../controllers/contentController';
 import { requireAuth } from '../middleware/authMiddleware';
 import { trackDevice, loginRateLimiter } from '../middleware/rateLimiter';
@@ -25,6 +25,7 @@ router.post('/metrics/signup', incrementSignups);
 
 // Protected Admin routes
 router.post('/events', requireAuth, createEvent);
+router.put('/events/:id', requireAuth, updateEvent);
 router.delete('/events/:id', requireAuth, deleteEvent);
 router.post('/clubs', requireAuth, createClub);
 router.put('/clubs/:id', requireAuth, updateClub);

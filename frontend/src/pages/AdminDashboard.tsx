@@ -37,6 +37,7 @@ export const AdminDashboard = () => {
     const [clubId, setClubId] = useState('');
     const [recurring, setRecurring] = useState('');
     const [eventTags, setEventTags] = useState<string[]>([]);
+    const [editingEvent, setEditingEvent] = useState<any>(null);
 
     // Club form state
     const [clubName, setClubName] = useState('');
@@ -110,20 +111,26 @@ export const AdminDashboard = () => {
         try {
             const dt = hasTime ? new Date(`${date}T${time}:00`) : new Date(`${date}T00:00:00`);
             const endDt = hasEndDate && endDate ? (hasEndTime ? new Date(`${endDate}T${endTime}:00`) : new Date(`${endDate}T23:59:00`)) : null;
-            const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+
+            let url = `${import.meta.env.VITE_API_URL}/api/events`;
+            let method = 'POST';
+
+            if (editingEvent) {
+                let allFuture = false;
+                if (editingEvent.recurring) {
+                    allFuture = window.confirm('This is a recurring event series.\n\nClick OK to ALSO update ALL FUTURE occurrences.\nClick Cancel to ONLY update this specific date.');
+                }
+                url = `${import.meta.env.VITE_API_URL}/api/events/${editingEvent.id}?allFuture=${allFuture}`;
+                method = 'PUT';
+            }
+
+            const r = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' }, credentials: 'include',
                 body: JSON.stringify({ title, date: dt.toISOString(), endDate: endDt?.toISOString() || null, description, clubId, recurring: recurring || null, tags: eventTags }),
             });
             if (r.ok) {
-                toast('Event published!');
-                setTitle('');
-                setDescription('');
-                setEventTags([]);
-                setHasEndDate(false);
-                setEndDate('');
-                setEndTime('16:00');
-                setHasTime(true);
-                setHasEndTime(true);
+                toast(editingEvent ? 'Event updated!' : 'Event published!');
+                resetEventForm();
                 loadEvents();
             }
             else { const d = await r.json(); toast(d.error || 'Failed', 'error'); }
@@ -204,6 +211,69 @@ export const AdminDashboard = () => {
         } else {
             toast('Failed to update color', 'error');
         }
+    };
+
+    const startEditEvent = (event: any) => {
+        setEditingEvent(event);
+        setTitle(event.title);
+        setDescription(event.description || '');
+        setClubId(event.clubId || '');
+        setRecurring(event.recurring || '');
+        setEventTags(event.tags || []);
+
+        const d = new Date(event.date);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        setDate(`${yyyy}-${mm}-${dd}`);
+
+        const hours = d.getHours();
+        const minutes = d.getMinutes();
+        if (hours === 0 && minutes === 0) {
+            setHasTime(false);
+        } else {
+            setHasTime(true);
+            setTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+        }
+
+        if (event.endDate) {
+            const ed = new Date(event.endDate);
+            const eYyyy = ed.getFullYear();
+            const eMm = String(ed.getMonth() + 1).padStart(2, '0');
+            const eDd = String(ed.getDate()).padStart(2, '0');
+            setEndDate(`${eYyyy}-${eMm}-${eDd}`);
+            setHasEndDate(true);
+
+            const eHours = ed.getHours();
+            const eMinutes = ed.getMinutes();
+            if (eHours === 23 && eMinutes === 59) {
+                setHasEndTime(false);
+            } else {
+                setHasEndTime(true);
+                setEndTime(`${String(eHours).padStart(2, '0')}:${String(eMinutes).padStart(2, '0')}`);
+            }
+        } else {
+            setHasEndDate(false);
+            setEndDate('');
+            setHasEndTime(true);
+            setEndTime('16:00');
+        }
+    };
+
+    const resetEventForm = () => {
+        setEditingEvent(null);
+        setTitle('');
+        setDescription('');
+        setClubId(clubs[0]?.id || '');
+        setRecurring('');
+        setEventTags([]);
+        setDate('');
+        setHasTime(true);
+        setTime('15:00');
+        setHasEndDate(false);
+        setEndDate('');
+        setHasEndTime(true);
+        setEndTime('16:00');
     };
 
     const startEditClub = (club: Club) => {
@@ -329,9 +399,18 @@ export const AdminDashboard = () => {
             {/* Event Tab */}
             {tab === 'events' && (
                 <div className="card" style={{ padding: '32px', animation: 'fadeUp 0.3s ease both' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
-                        <PlusCircle size={22} style={{ color: 'var(--red)' }} />
-                        <h2 style={{ fontSize: '1.15rem', fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0 }}>Create New Event</h2>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {editingEvent ? <Edit3 size={22} style={{ color: 'var(--red)' }} /> : <PlusCircle size={22} style={{ color: 'var(--red)' }} />}
+                            <h2 style={{ fontSize: '1.15rem', fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0 }}>
+                                {editingEvent ? 'Edit Event' : 'Create New Event'}
+                            </h2>
+                        </div>
+                        {editingEvent && (
+                            <button type="button" onClick={resetEventForm} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.82rem', padding: '6px 12px' }}>
+                                <X size={14} /> Clear Edit
+                            </button>
+                        )}
                     </div>
                     <form onSubmit={handleEventSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '18px' }}>
@@ -421,8 +500,10 @@ export const AdminDashboard = () => {
                         </div>
                         <div><label className="label">Description (Optional)</label><textarea className="input" rows={3} style={{ resize: 'none' }} placeholder="Details..." value={description} onChange={e => setDescription(e.target.value)} /></div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '4px' }}>
-                            <button type="button" onClick={() => { setTitle(''); setDescription(''); }} className="btn btn-ghost" style={{ fontSize: '0.87rem' }}>Cancel</button>
-                            <button type="submit" disabled={submitting} className="btn btn-red" style={{ paddingInline: '32px' }}>{submitting ? 'Publishing...' : 'Save Event'}</button>
+                            <button type="button" onClick={resetEventForm} className="btn btn-ghost" style={{ fontSize: '0.87rem' }}>Cancel</button>
+                            <button type="submit" disabled={submitting} className="btn btn-red" style={{ paddingInline: '32px' }}>
+                                {submitting ? 'Saving...' : (editingEvent ? 'Update Event' : 'Save Event')}
+                            </button>
                         </div>
                     </form>
 
@@ -503,9 +584,14 @@ export const AdminDashboard = () => {
                                                         {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{event.endDate ? ` – ${new Date(event.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''} · <span style={{ color: 'var(--text)', fontWeight: 600 }}>{event.club?.name || 'School Event'}</span>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => handleDeleteEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)', flexShrink: 0 }} title="Delete">
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    <button onClick={() => startEditEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--gray-500)', flexShrink: 0 }} title="Edit">
+                                                        <Edit3 size={15} />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteEvent(event)} className="btn btn-ghost" style={{ padding: '6px', color: 'var(--red)', flexShrink: 0 }} title="Delete">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         );
                                     })}

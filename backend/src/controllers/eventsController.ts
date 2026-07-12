@@ -166,3 +166,110 @@ export const getEventById = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Failed to fetch event details' });
     }
 };
+
+export const updateEvent = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { allFuture } = req.query;
+    const { title, date, endDate, description, clubId, recurring, tags } = req.body ?? {};
+
+    if (!title || !date) {
+        res.status(400).json({ error: 'Missing required fields: title and date' });
+        return;
+    }
+
+    if (recurring !== undefined && recurring !== null && !isRecurring(recurring)) {
+        res.status(400).json({ error: 'Invalid recurring value' });
+        return;
+    }
+
+    if (!clubId) {
+        res.status(400).json({ error: 'Hosting club is required' });
+        return;
+    }
+
+    const club = await prisma.club.findUnique({ where: { id: clubId }, select: { id: true } });
+    if (!club) {
+        res.status(404).json({ error: 'Hosting club not found' });
+        return;
+    }
+
+    try {
+        const newDate = new Date(date);
+        if (isNaN(newDate.getTime())) {
+            res.status(400).json({ error: 'Invalid date' });
+            return;
+        }
+
+        const newEndDate = endDate ? new Date(endDate) : null;
+        if (endDate && isNaN(newEndDate!.getTime())) {
+            res.status(400).json({ error: 'Invalid endDate' });
+            return;
+        }
+
+        const originalEvent = await prisma.event.findUnique({ where: { id: id as string } });
+        if (!originalEvent) {
+            res.status(404).json({ error: 'Event not found' });
+            return;
+        }
+
+        const recurringValue = isRecurring(recurring) ? recurring : null;
+
+        if (allFuture === 'true' && originalEvent.recurring) {
+            // Find all future events in the series starting from this event's original date
+            const futureEvents = await prisma.event.findMany({
+                where: {
+                    title: originalEvent.title,
+                    clubId: originalEvent.clubId,
+                    recurring: originalEvent.recurring,
+                    date: { gte: originalEvent.date }
+                }
+            });
+
+            const duration = newEndDate ? (newEndDate.getTime() - newDate.getTime()) : null;
+            const offset = newDate.getTime() - originalEvent.date.getTime();
+
+            await prisma.$transaction(
+                futureEvents.map(ev => {
+                    const shiftedDate = new Date(ev.date.getTime() + offset);
+                    const shiftedEndDate = duration !== null ? new Date(shiftedDate.getTime() + duration) : null;
+
+                    return prisma.event.update({
+                        where: { id: ev.id },
+                        data: {
+                            title,
+                            date: shiftedDate,
+                            endDate: shiftedEndDate,
+                            description: description ?? null,
+                            clubId,
+                            recurring: recurringValue,
+                            tags: Array.isArray(tags) ? tags : [],
+                        }
+                    });
+                })
+            );
+        } else {
+            // If it was part of a recurring series and we only edit this instance,
+            // set recurring to null to decouple it from future cascading edits/deletions.
+            const updatedRecurring = (originalEvent.recurring && allFuture !== 'true') ? null : recurringValue;
+
+            await prisma.event.update({
+                where: { id: id as string },
+                data: {
+                    title,
+                    date: newDate,
+                    endDate: newEndDate,
+                    description: description ?? null,
+                    clubId,
+                    recurring: updatedRecurring,
+                    tags: Array.isArray(tags) ? tags : [],
+                }
+            });
+        }
+
+        clearDashboardCache();
+        res.json({ message: 'Event updated successfully' });
+    } catch (error) {
+        console.error('Error updating event:', error);
+        res.status(500).json({ error: 'Failed to update event' });
+    }
+};
