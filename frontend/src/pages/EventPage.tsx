@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, Tag, ChevronDown } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Helmet } from 'react-helmet-async';
-import { generateGoogleCalendarUrl, downloadIcsFile } from '../utils/calendarExport';
+import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../utils/calendarExport';
 
 export const EventPage = () => {
     const params = useParams();
@@ -122,24 +122,26 @@ export const EventPage = () => {
                                         onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-100)'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        Google Calendar (Web/Mobile)
+                                        Google Calendar (App / Web)
                                     </a>
-                                    <div 
-                                        onClick={() => { downloadIcsFile(event); setShowExportDropdown(false); }}
+                                    <a 
+                                        href={getAppleCalendarUrl(event)} 
+                                        onClick={() => setShowExportDropdown(false)}
                                         style={{
                                             display: 'block',
                                             padding: '12px 16px',
                                             fontSize: '0.85rem',
                                             fontWeight: 600,
                                             color: 'var(--text)',
+                                            textDecoration: 'none',
                                             transition: 'background 0.2s ease',
                                             cursor: 'pointer',
                                         }}
                                         onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-100)'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        Apple / Outlook Calendar (.ics)
-                                    </div>
+                                        Apple Calendar (App / OS)
+                                    </a>
                                 </div>
                             )}
                         </div>

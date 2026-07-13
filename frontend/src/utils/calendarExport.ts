@@ -34,35 +34,8 @@ export const generateGoogleCalendarUrl = (event: CalendarEvent): string => {
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}`;
 };
 
-export const downloadIcsFile = (event: CalendarEvent): void => {
-    const start = formatToUtcBasic(event.date);
-    const end = formatToUtcBasic(event.endDate || getFallbackEndDate(event.date));
-    const stamp = formatToUtcBasic(new Date().toISOString());
-    const cleanTitle = event.title.replace(/[,;]/g, '\\$&');
-    const cleanDesc = (event.description || '').replace(/\n/g, '\\n').replace(/[,;]/g, '\\$&') + `\\n\\nHosted by: ${event.club?.name || 'School Event'}`;
-
-    const icsContent = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//BCSS Calendar//Event//EN',
-        'BEGIN:VEVENT',
-        `UID:${event.id || Math.random().toString(36).substring(2)}`,
-        `DTSTAMP:${stamp}`,
-        `DTSTART:${start}`,
-        `DTEND:${end}`,
-        `SUMMARY:${cleanTitle}`,
-        `DESCRIPTION:${cleanDesc}`,
-        'END:VEVENT',
-        'END:VCALENDAR'
-    ].join('\r\n');
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${event.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+export const getAppleCalendarUrl = (event: CalendarEvent): string => {
+    // Navigating directly to the backend .ics file served inline will open the native Calendar app
+    // directly on iOS and macOS, avoiding the standard browser "downloads" dialog.
+    return `${import.meta.env.VITE_API_URL}/api/events/${event.id}/ics`;
 };

@@ -1,6 +1,6 @@
 import express from 'express';
 import { login, logout, verifySession } from '../controllers/authController';
-import { getEvents, createEvent, deleteEvent, getEventById, updateEvent } from '../controllers/eventsController';
+import { getEvents, createEvent, deleteEvent, getEventById, updateEvent, getEventIcs } from '../controllers/eventsController';
 import { getClubs, createClub, updateClub, deleteClub, getCategories, deleteCategory, updateCategoryColor, getMetrics, incrementVisits, incrementSignups, getClubById, getDashboardData } from '../controllers/contentController';
 import { requireAuth } from '../middleware/authMiddleware';
 import { trackDevice, loginRateLimiter } from '../middleware/rateLimiter';
@@ -19,6 +19,7 @@ router.get('/categories', getCategories);
 router.get('/clubs/:id', getClubById);
 router.get('/events', getEvents);
 router.get('/events/:id', getEventById);
+router.get('/events/:id/ics', getEventIcs);
 router.get('/metrics', getMetrics);
 router.post('/metrics/visit', incrementVisits);
 router.post('/metrics/signup', incrementSignups);

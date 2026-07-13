@@ -50,8 +50,8 @@ async function main() {
     if (!metrics) {
         await prisma.metrics.create({
             data: {
-                activeUsers: 153,
-                portalSignups: 42,
+                activeUsers: 0,
+                portalSignups: 0,
             },
         });
     }

@@ -273,3 +273,62 @@ export const updateEvent = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Failed to update event' });
     }
 };
+
+export const getEventIcs = async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    try {
+        const event = await prisma.event.findUnique({
+            where: { id: id as string },
+            include: { club: true }
+        });
+        if (!event) {
+            res.status(404).json({ error: 'Event not found' });
+            return;
+        }
+
+        const formatToUtcBasic = (d: Date): string => {
+            const y = d.getUTCFullYear();
+            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(d.getUTCDate()).padStart(2, '0');
+            const h = String(d.getUTCHours()).padStart(2, '0');
+            const min = String(d.getUTCMinutes()).padStart(2, '0');
+            const s = String(d.getUTCSeconds()).padStart(2, '0');
+            return `${y}${m}${day}T${h}${min}${s}Z`;
+        };
+
+        const getFallbackEndDate = (d: Date): Date => {
+            const fallback = new Date(d);
+            fallback.setUTCHours(fallback.getUTCHours() + 1);
+            return fallback;
+        };
+
+        const start = formatToUtcBasic(event.date);
+        const end = formatToUtcBasic(event.endDate || getFallbackEndDate(event.date));
+        const stamp = formatToUtcBasic(new Date());
+        const cleanTitle = event.title.replace(/[,;]/g, '\\$&');
+        const cleanDesc = (event.description || '').replace(/\n/g, '\\n').replace(/[,;]/g, '\\$&') + `\\n\\nHosted by: ${event.club?.name || 'School Event'}`;
+
+        const icsContent = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//BCSS Calendar//Event//EN',
+            'BEGIN:VEVENT',
+            `UID:${event.id}`,
+            `DTSTAMP:${stamp}`,
+            `DTSTART:${start}`,
+            `DTEND:${end}`,
+            `SUMMARY:${cleanTitle}`,
+            `DESCRIPTION:${cleanDesc}`,
+            'END:VEVENT',
+            'END:VCALENDAR'
+        ].join('\r\n');
+
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+        res.setHeader('Content-Disposition', `inline; filename="${event.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics"`);
+        res.send(icsContent);
+    } catch (error) {
+        console.error('Error exporting event to ICS:', error);
+        res.status(500).json({ error: 'Failed to generate calendar file' });
+    }
+};
+

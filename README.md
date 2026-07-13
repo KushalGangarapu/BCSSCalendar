@@ -39,8 +39,8 @@ The system is designed from the ground up to solve a real-world problem: replaci
 *   **Premium Skeleton Screens**: Replaced flashing blank blocks and layout shifts with smooth CSS-pulsed skeleton loaders matching the exact card geometries.
 
 ### 🔗 Real-world Calendar Integrations
-*   **Standardized iCal (.ics) Downloads:** Generates valid RFC-5545 iCalendar data on-the-fly directly inside the browser, allowing students to download and import event details straight into Apple Calendar, Microsoft Outlook, or Google Calendar desktop clients.
-*   **Google Calendar Deep-Linking:** Automatically constructs parameter-mapped Google Calendar creation URLs so students can add events to their personal calendars with a single click.
+*   **Direct Google Calendar App Deep-Linking:** Automatically constructs parameter-mapped Google Calendar creation URLs that leverage App/Universal Links to open the native Google Calendar app directly on mobile devices with pre-filled event details, falling back cleanly to the browser interface.
+*   **Native Apple Calendar Integration:** Implements a custom backend streaming endpoint (`/api/events/:id/ics`) serving raw RFC-5545 iCalendar data inline. On Apple devices (iOS, macOS), browsers intercept this stream to launch the native "Add Event" calendar panel directly within the browser tab, bypassing standard file downloads.
 
 ### 🎨 BCSS Branding Design System (Vanilla CSS)
 *   **Zero Framework Overhead:** Built entirely with Vanilla CSS (no Tailwind or heavy component libraries), demonstrating clean CSS layout techniques (CSS Grid, Flexbox, custom keyframe transitions, scroll snapping).
@@ -72,7 +72,7 @@ graph TD
     end
 
     subgraph Database [Storage Layer]
-        J[Prisma Client] -->|Type-safe Querying| K[PostgreSQL / SQLite Database]
+        J[Prisma Client] -->|Type-safe Querying| K[PostgreSQL Database]
     end
 
     A <==>|HTTPS / CORS / HttpOnly Cookies| F
@@ -85,7 +85,7 @@ graph TD
 *   **Date Library:** `date-fns` & `date-fns-tz` (ensures timezone-agnostic operations, storing all database times in UTC and rendering them in local student timezones)
 *   **Backend Server:** Node.js, Express (TypeScript)
 *   **Database ORM:** Prisma ORM
-*   **Database Engine:** PostgreSQL (Production) / SQLite (Local prototyping)
+*   **Database Engine:** PostgreSQL (Development & Production)
 
 ---
 
@@ -184,7 +184,6 @@ model Metrics {
 
 ```text
 BCSS-Calendar/
-├── Clubs Kushal.csv              # Source CSV containing raw BCSS school club listings
 ├── backend/
 │   ├── prisma/
 │   │   ├── schema.prisma         # Relational database schema mappings
@@ -231,7 +230,7 @@ BCSS-Calendar/
     │   │   ├── Dashboard.tsx         # Dashboard displaying analytics & feeds
     │   │   └── MasterCalendar.tsx    # Calendar page integrating all views
     │   ├── utils/
-    │   │   ├── calendarExport.ts     # RFC-5545 iCal generator and Google link maker
+    │   │   ├── calendarExport.ts     # Google & Apple calendar app deep link helpers
     │   │   ├── cropImage.ts          # Easy-crop helper mapping
     │   │   └── timeUtils.ts          # Timezone conversion & live event calculation
     │   ├── App.css
@@ -270,7 +269,7 @@ cd BCSS-Calendar
 3.  Create a `.env` file in the `backend/` folder:
     ```env
     PORT=3001
-    DATABASE_URL="file:./dev.db"
+    DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bcss_calendar"
     JWT_SECRET="your_dev_jwt_secret_phrase"
     NODE_ENV="development"
     FRONTEND_URL="http://localhost:5173"
@@ -322,7 +321,7 @@ cd BCSS-Calendar
 
 When deploying to production environments, configure these adjustments to ensure enterprise-grade scaling:
 
-*   **Database Migration:** Change the database provider in `schema.prisma` from `sqlite` to `postgresql` (or any other native cloud relational service) and supply the cloud server URL in `DATABASE_URL`.
+*   **Database Connection:** Supply your production cloud PostgreSQL server URL in the `DATABASE_URL` environment variable.
 *   **Security Configurations:** Ensure `NODE_ENV` is set to `"production"` in backend settings. This automatically triggers `secure: true` and `sameSite: "none"` cookie options, protecting sessions over HTTPS.
 *   **CORS Configuration:** Restrict the backend CORS origin strictly to your public web app domain by updating `FRONTEND_URL` in the environment variables.
 *   **Static Asset Storage:** Replace base64 image uploads with cloud blob storage integrations (e.g., AWS S3, Cloudinary) to ensure fast content delivery.
@@ -331,7 +330,7 @@ When deploying to production environments, configure these adjustments to ensure
 
 ## ⚖️ Engineering Trade-offs & Lessons Learned
 * **Vanilla CSS vs. Tailwind:** Chosen to completely eliminate framework overhead and build a deep, first-principles understanding of the CSS box model, grid layouts, and layout reflow performance.
-* **Timezone Complexity:** Managing datetimes at the boundary of SQLite (which handles dates as strings/ints) and PostgreSQL required implementing strict UTC storage policies via `date-fns-tz` to eliminate systemic timezone drift bugs across client devices.
+* **Timezone Complexity:** Managing datetimes across client and server boundaries required implementing strict UTC storage policies via `date-fns-tz` to eliminate systemic timezone drift bugs across client devices.
 
 ---
 
