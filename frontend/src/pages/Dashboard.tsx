@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { isEventLive } from '../utils/timeUtils';
 import { SkeletonClubCard, SkeletonEventItem } from '../components/Skeleton';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface StatCardProps {
     icon: any;
@@ -112,7 +113,7 @@ export const Dashboard = () => {
 
     const displayEvents = filteredEvents.slice(0, 5);
 
-    const isMobile = window.innerWidth <= 1200;
+    const isMobile = useIsMobile();
 
     return (
         <div>

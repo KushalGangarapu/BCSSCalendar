@@ -54,17 +54,13 @@ export const createEvent = async (req: Request, res: Response) => {
         return;
     }
 
-    // clubId is required by the schema (NOT NULL). Reject early instead of letting Prisma throw.
-    if (!clubId) {
-        res.status(400).json({ error: 'Hosting club is required' });
-        return;
-    }
-
-    // Confirm the club exists so we get a clean 404 instead of a FK violation.
-    const club = await prisma.club.findUnique({ where: { id: clubId }, select: { id: true } });
-    if (!club) {
-        res.status(404).json({ error: 'Hosting club not found' });
-        return;
+    // Confirm the club exists if clubId is provided.
+    if (clubId) {
+        const club = await prisma.club.findUnique({ where: { id: clubId }, select: { id: true } });
+        if (!club) {
+            res.status(404).json({ error: 'Hosting club not found' });
+            return;
+        }
     }
 
     try {
@@ -102,7 +98,7 @@ export const createEvent = async (req: Request, res: Response) => {
                 date: eventDate,
                 endDate: endDateOffset !== null ? new Date(eventDate.getTime() + endDateOffset) : null,
                 description: description ?? null,
-                clubId,
+                clubId: clubId || null,
                 recurring: recurringValue,
                 tags: Array.isArray(tags) ? tags : [],
             };
@@ -182,15 +178,12 @@ export const updateEvent = async (req: Request, res: Response) => {
         return;
     }
 
-    if (!clubId) {
-        res.status(400).json({ error: 'Hosting club is required' });
-        return;
-    }
-
-    const club = await prisma.club.findUnique({ where: { id: clubId }, select: { id: true } });
-    if (!club) {
-        res.status(404).json({ error: 'Hosting club not found' });
-        return;
+    if (clubId) {
+        const club = await prisma.club.findUnique({ where: { id: clubId }, select: { id: true } });
+        if (!club) {
+            res.status(404).json({ error: 'Hosting club not found' });
+            return;
+        }
     }
 
     try {

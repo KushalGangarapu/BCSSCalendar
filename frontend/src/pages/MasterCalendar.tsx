@@ -11,6 +11,7 @@ import { WeekView } from '../components/calendar/WeekView';
 import { DayView } from '../components/calendar/DayView';
 import { AgendaView } from '../components/calendar/AgendaView';
 import { EventDetailModal } from '../components/calendar/EventDetailModal';
+import { EditEventModal } from '../components/calendar/EditEventModal';
 import { MobileFilterDropdown } from '../components/MobileFilterDropdown';
 import { PrintSchedule } from '../components/calendar/PrintSchedule';
 
@@ -23,9 +24,9 @@ interface Event {
 }
 
 const useIsMobile = () => {
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1200);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth <= 1200);
+        const handler = () => setIsMobile(window.innerWidth <= 768);
         window.addEventListener('resize', handler);
         return () => window.removeEventListener('resize', handler);
     }, []);
@@ -50,10 +51,12 @@ export const MasterCalendar = () => {
     const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
     const [month, setMonth] = useState(new Date());
     const [events, setEvents] = useState<Event[]>([]);
+    const [clubs, setClubs] = useState<any[]>([]);
     const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [hovered, setHovered] = useState<Event | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [followedOnly, setFollowedOnly] = useState(false);
     const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
@@ -61,9 +64,17 @@ export const MasterCalendar = () => {
     const navigate = useNavigate();
     const isMobile = useIsMobile();
 
+    const refreshEvents = () => {
+        fetch(`${import.meta.env.VITE_API_URL}/api/events?_t=${Date.now()}`)
+            .then(r => r.json())
+            .then(setEvents)
+            .catch(console.error);
+    };
+
     useEffect(() => {
         Promise.all([
             fetch(`${import.meta.env.VITE_API_URL}/api/events`).then(r => r.json()).then(setEvents),
+            fetch(`${import.meta.env.VITE_API_URL}/api/clubs`).then(r => r.json()).then(setClubs),
             fetch(`${import.meta.env.VITE_API_URL}/api/categories`).then(r => r.json()).then(setCategories),
             fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify`, { credentials: 'include' })
                 .then(r => setIsAdmin(r.ok)).catch(() => setIsAdmin(false))
@@ -311,21 +322,38 @@ export const MasterCalendar = () => {
                     </div>
                 ) : (
                     <>
-                        {view === 'month' && <MonthView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} isMobile={isMobile} />}
-                        {view === 'week' && <WeekView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} isMobile={isMobile} />}
-                        {view === 'day' && <DayView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
-                        {view === 'agenda' && <AgendaView events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} getEventStyle={resolveEventStyle} />}
+                        {view === 'month' && <MonthView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} handleEditEvent={setEditingEvent} getEventStyle={resolveEventStyle} isMobile={isMobile} />}
+                        {view === 'week' && <WeekView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} handleEditEvent={setEditingEvent} getEventStyle={resolveEventStyle} isMobile={isMobile} />}
+                        {view === 'day' && <DayView month={month} events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} handleEditEvent={setEditingEvent} getEventStyle={resolveEventStyle} />}
+                        {view === 'agenda' && <AgendaView events={displayEvents} hovered={hovered} setHovered={setHovered} onEventClick={setSelectedEvent} isAdmin={isAdmin} handleDeleteEvent={handleDelete} handleEditEvent={setEditingEvent} getEventStyle={resolveEventStyle} />}
                     </>
                 )}
             </div>
 
-            {/* Event Details Modal */}
-            <EventDetailModal
-                event={selectedEvent}
-                onClose={() => setSelectedEvent(null)}
-                categories={categories}
-                categoryColor={selectedEvent ? categories.find(c => c.name === selectedEvent.club?.category)?.color : undefined}
-            />
+            {/* Event Details & Edit Modals Portaled to Body */}
+            {createPortal(
+                <>
+                    <EventDetailModal
+                        event={selectedEvent}
+                        onClose={() => setSelectedEvent(null)}
+                        categories={categories}
+                        categoryColor={selectedEvent ? categories.find(c => c.name === selectedEvent.club?.category)?.color : undefined}
+                        isAdmin={isAdmin}
+                        onEditEvent={setEditingEvent}
+                    />
+
+                    {editingEvent && (
+                        <EditEventModal
+                            event={editingEvent}
+                            onClose={() => setEditingEvent(null)}
+                            onSaveSuccess={refreshEvents}
+                            clubs={clubs}
+                            categories={categories}
+                        />
+                    )}
+                </>,
+                document.body
+            )}
 
             {createPortal(
                 <PrintSchedule 

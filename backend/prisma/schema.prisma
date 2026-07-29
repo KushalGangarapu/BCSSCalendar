@@ -45,8 +45,8 @@ model Event {
   date        DateTime // Stored in UTC
   endDate     DateTime? // Optional end date/time, stored in UTC
   description String?
-  clubId      String
-  club        Club     @relation(fields: [clubId], references: [id])
+  clubId      String?
+  club        Club?    @relation(fields: [clubId], references: [id])
   recurring   String? // null, "weekly", "biweekly", "monthly"
   tags        String[] @default([])
   createdAt   DateTime @default(now())

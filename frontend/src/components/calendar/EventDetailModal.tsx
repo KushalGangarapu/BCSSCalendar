@@ -9,27 +9,22 @@ interface EventDetailModalProps {
     onClose: () => void;
     categories?: { name: string, color: string }[];
     categoryColor?: string;
+    isAdmin?: boolean;
+    onEditEvent?: (event: any) => void;
 }
 
-export const EventDetailModal = ({ event, onClose, categories = [], categoryColor }: EventDetailModalProps) => {
+export const EventDetailModal = ({ event, onClose, categories = [], categoryColor, isAdmin, onEditEvent }: EventDetailModalProps) => {
     const navigate = useNavigate();
     const [showExportDropdown, setShowExportDropdown] = useState(false);
 
     if (!event) return null;
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'transparent',
-            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '24px'
-        }} onClick={onClose}>
-            <div className="card" onClick={e => e.stopPropagation()} style={{
-                width: '100%', maxWidth: '440px', background: 'var(--white)',
-                padding: '32px', borderRadius: 'var(--radius-xl)',
-                position: 'relative', animation: 'scaleUp 0.3s ease both',
-                border: '1px solid rgba(211, 47, 47, 0.4)',
-                boxShadow: '0 8px 32px rgba(211, 47, 47, 0.15)'
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{
+                maxWidth: '460px',
+                padding: '32px',
+                position: 'relative',
             }}>
                 <button onClick={onClose} className="btn btn-ghost" style={{
                     position: 'absolute', top: '16px', right: '16px', padding: '8px'
@@ -86,13 +81,18 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                     </div>
                 )}
 
-                <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
+                <div style={{ marginTop: '32px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <button onClick={() => navigate(`/events/${event.id}`)} className="btn" style={{
                         flex: 1, background: categoryColor || 'var(--red)', color: '#fff',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                     }}>
                         View Full Event <ExternalLink size={16} />
                     </button>
+                    {isAdmin && onEditEvent && (
+                        <button onClick={() => { onClose(); onEditEvent(event); }} className="btn btn-outline" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            Edit Event
+                        </button>
+                    )}
                     {event.clubId && (
                         <button onClick={() => navigate(`/clubs/${event.clubId}`)} className="btn btn-outline" style={{ flex: 1 }}>
                             View Club

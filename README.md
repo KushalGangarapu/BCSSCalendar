@@ -18,12 +18,15 @@ The system is designed from the ground up to solve a real-world problem: replaci
 
 ### 📅 Advanced Multi-View Calendar Engine
 *   **Four Interactive Views:** Toggle seamlessly between **Month View** (grid layout), **Week View** (detailed weekly columns), **Day View** (time-block scheduler), and **Agenda View** (clean chronological list of cards).
-*   **Fully Responsive & Touch-Optimized:** A custom responsive architecture (via viewport resize hooks) collapses the desktop calendar grid into lightweight indicator dots on mobile screens, revealing detailed overlays upon tap.
+*   **Direct In-Calendar Event Editing (`EditEventModal`):** Administrators can edit any event (past, present, or future) directly from the calendar views or event details modal. Features a full right-side frosted glass backdrop portal (`backdrop-filter: blur(10px)`).
+*   **Smart Multi-Day Event Rendering:** Multi-day events automatically render on their start date, end date, and currently active day, displaying date ranges (`MMM d – MMM d`) inside cell pills while remaining clean on past/future middle days.
+*   **Fully Responsive & Touch-Optimized:** A custom responsive architecture collapses desktop calendar grids smoothly for touch screens with `-webkit-overflow-scrolling` and clipping protection.
 *   **Print Layouts:** Implements dedicated print styles (`PrintSchedule.tsx`) allowing admins and students to generate beautifully formatted physical PDF schedules or flyers.
 
 ### ⚙️ Recurrence Engine & Database Relations
 *   **Automatic Recurrence Spawning:** When administrators create recurring events (weekly, bi-weekly, or monthly), the backend calculates future dates using `date-fns` (weekly runs for 16 weeks, bi-weekly for 8, monthly for 4) and writes them to the database as distinct relational entities.
 *   **Smart Relational Updates & Deletion:** When editing or deleting a recurring event, the system prompts the administrator to either modify/delete that specific instance or automatically cascade changes (such as title, description, tags, or shifted dates/times) to all future instances in the recurrence series.
+*   **Optional Club Association (General School Events):** Events support optional `clubId` fields (`clubId: null`), enabling general school-wide announcements, holidays, and exam schedules to be posted independently without creating artificial club profiles.
 
 ### 📱 Progressive Web App (PWA) Integration
 *   **Installed Application Experience:** Fully installable on iOS, Android, macOS, and Windows with a standalone display mode and custom branding icons.
@@ -156,8 +159,8 @@ model Event {
   date        DateTime // Stored in UTC
   endDate     DateTime? // Optional end date/time, stored in UTC
   description String?
-  clubId      String
-  club        Club     @relation(fields: [clubId], references: [id])
+  clubId      String?  // Optional relation for General School Events
+  club        Club?    @relation(fields: [clubId], references: [id])
   recurring   String?  // null, "weekly", "biweekly", "monthly"
   tags        String[] @default([])
   createdAt   DateTime @default(now())
