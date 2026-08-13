@@ -1,10 +1,17 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
-import { clearDashboardCache, getCachedDashboard, setCachedDashboard } from '../utils/cache';
+import { clearCache, getCache, setCache } from '../utils/cache';
 
 export const getClubs = async (req: Request, res: Response) => {
     try {
+        const cached = getCache('clubs');
+        if (cached) {
+            res.setHeader('X-Cache', 'HIT');
+            return res.json(cached);
+        }
         const clubs = await prisma.club.findMany({ orderBy: { name: 'asc' } });
+        setCache('clubs', clubs);
+        res.setHeader('X-Cache', 'MISS');
         res.json(clubs);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch clubs' });
@@ -14,6 +21,12 @@ export const getClubs = async (req: Request, res: Response) => {
 export const getClubById = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
+        const cacheKey = `club_${id}`;
+        const cached = getCache(cacheKey);
+        if (cached) {
+            res.setHeader('X-Cache', 'HIT');
+            return res.json(cached);
+        }
         const club = await prisma.club.findUnique({
             where: { id },
             include: {
@@ -26,6 +39,8 @@ export const getClubById = async (req: Request, res: Response) => {
             res.status(404).json({ error: 'Club not found' });
             return;
         }
+        setCache(cacheKey, club);
+        res.setHeader('X-Cache', 'MISS');
         res.json(club);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch club details' });
@@ -34,7 +49,7 @@ export const getClubById = async (req: Request, res: Response) => {
 
 export const createClub = async (req: Request, res: Response) => {
     try {
-        const { name, category, description, instagram, discord, imageUrl } = req.body;
+        const { name, category, description, instagram, discord, imageUrl, isFeatured } = req.body;
         if (!name || !category || !description) {
             return res.status(400).json({ error: 'Name, category, and description are required' });
         }
@@ -47,9 +62,17 @@ export const createClub = async (req: Request, res: Response) => {
         });
 
         const club = await prisma.club.create({
-            data: { name, category, description, instagram, discord, imageUrl: imageUrl || null },
+            data: { 
+                name, 
+                category, 
+                description, 
+                instagram: instagram || null, 
+                discord: discord || null, 
+                imageUrl: imageUrl || null,
+                isFeatured: Boolean(isFeatured)
+            },
         });
-        clearDashboardCache();
+        clearCache();
         res.status(201).json(club);
     } catch (error: any) {
         if (error.code === 'P2002') {
@@ -62,7 +85,7 @@ export const createClub = async (req: Request, res: Response) => {
 export const updateClub = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
-        const { name, category, description, instagram, discord, imageUrl } = req.body;
+        const { name, category, description, instagram, discord, imageUrl, isFeatured } = req.body;
 
         if (category) {
             // Ensure category exists
@@ -73,22 +96,47 @@ export const updateClub = async (req: Request, res: Response) => {
             });
         }
 
+        const updateData: any = {
+            name: name as string,
+            category: category as string,
+            description: description as string,
+            instagram: (instagram as string) || null,
+            discord: (discord as string) || null,
+            imageUrl: (imageUrl as string) || null,
+        };
+        if (typeof isFeatured === 'boolean') {
+            updateData.isFeatured = isFeatured;
+        }
+
         const club = await prisma.club.update({
             where: { id },
-            data: {
-                name: name as string,
-                category: category as string,
-                description: description as string,
-                instagram: (instagram as string) || null,
-                discord: (discord as string) || null,
-                imageUrl: (imageUrl as string) || null,
-            },
+            data: updateData,
         });
-        clearDashboardCache();
+        clearCache();
         res.json(club);
     } catch (error: any) {
         if (error.code === 'P2025') return res.status(404).json({ error: 'Club not found' });
         res.status(500).json({ error: 'Failed to update club' });
+    }
+};
+
+export const toggleClubFeatured = async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id as string;
+        const currentClub = await prisma.club.findUnique({ where: { id } });
+        if (!currentClub) {
+            return res.status(404).json({ error: 'Club not found' });
+        }
+
+        const updatedClub = await prisma.club.update({
+            where: { id },
+            data: { isFeatured: !currentClub.isFeatured }
+        });
+
+        clearCache();
+        res.json(updatedClub);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to toggle featured status' });
     }
 };
 
@@ -98,7 +146,7 @@ export const deleteClub = async (req: Request, res: Response) => {
         // Delete associated events first
         await prisma.event.deleteMany({ where: { clubId: id as string } });
         await prisma.club.delete({ where: { id } });
-        clearDashboardCache();
+        clearCache();
         res.json({ message: 'Club deleted' });
     } catch (error: any) {
         if (error.code === 'P2025') return res.status(404).json({ error: 'Club not found' });
@@ -108,7 +156,14 @@ export const deleteClub = async (req: Request, res: Response) => {
 
 export const getCategories = async (req: Request, res: Response) => {
     try {
+        const cached = getCache('categories');
+        if (cached) {
+            res.setHeader('X-Cache', 'HIT');
+            return res.json(cached);
+        }
         const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+        setCache('categories', categories);
+        res.setHeader('X-Cache', 'MISS');
         res.json(categories);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch categories' });
@@ -124,7 +179,7 @@ export const deleteCategory = async (req: Request, res: Response) => {
         await prisma.event.deleteMany({ where: { clubId: { in: clubIds } } });
         await prisma.club.deleteMany({ where: { category: categoryName } });
         await prisma.category.delete({ where: { name: categoryName } });
-        clearDashboardCache();
+        clearCache();
 
         res.json({ message: 'Category deleted' });
     } catch (error) {
@@ -145,7 +200,7 @@ export const updateCategoryColor = async (req: Request, res: Response) => {
             where: { name: categoryName },
             data: { color }
         });
-        clearDashboardCache();
+        clearCache();
 
         res.json(category);
     } catch (error) {
@@ -155,6 +210,11 @@ export const updateCategoryColor = async (req: Request, res: Response) => {
 
 export const getMetrics = async (req: Request, res: Response) => {
     try {
+        const cached = getCache('metrics', 10000);
+        if (cached) {
+            res.setHeader('X-Cache', 'HIT');
+            return res.json(cached);
+        }
         const metrics = await prisma.metrics.findFirst();
         const clubCount = await prisma.club.count();
         const now = new Date();
@@ -166,11 +226,14 @@ export const getMetrics = async (req: Request, res: Response) => {
                 ],
             },
         });
-        res.json({
+        const result = {
             pageVisits: metrics?.activeUsers || 0,
             clubCount,
             eventCount,
-        });
+        };
+        setCache('metrics', result);
+        res.setHeader('X-Cache', 'MISS');
+        res.json(result);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch metrics' });
     }
@@ -212,13 +275,14 @@ export const incrementSignups = async (req: Request, res: Response) => {
 
 export const getDashboardData = async (req: Request, res: Response) => {
     try {
-        const now = Date.now();
-        const cached = getCachedDashboard(now);
+        const cached = getCache('dashboard');
         if (cached) {
+            res.setHeader('X-Cache', 'HIT');
             res.json(cached);
             return;
         }
 
+        const now = Date.now();
         const oneHourAgo = new Date(now - 60 * 60 * 1000);
         const today = new Date(now);
 
@@ -273,11 +337,58 @@ export const getDashboardData = async (req: Request, res: Response) => {
             categories,
         };
 
-        setCachedDashboard(dashboardData, now);
-
+        setCache('dashboard', dashboardData);
+        res.setHeader('X-Cache', 'MISS');
         res.json(dashboardData);
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
         res.status(500).json({ error: 'Failed to fetch dashboard data' });
     }
 };
+
+export const fetchFullBootstrapPayload = async () => {
+    const now = new Date();
+    const [events, clubs, categories, metricsRecord, clubCount, eventCount] = await Promise.all([
+        prisma.event.findMany({ include: { club: true }, orderBy: { date: 'asc' } }),
+        prisma.club.findMany({ orderBy: { name: 'asc' } }),
+        prisma.category.findMany({ orderBy: { name: 'asc' } }),
+        prisma.metrics.findFirst(),
+        prisma.club.count(),
+        prisma.event.count({
+            where: {
+                OR: [{ date: { gte: now } }, { endDate: { gte: now } }]
+            }
+        })
+    ]);
+
+    return {
+        events,
+        clubs,
+        categories,
+        metrics: {
+            pageVisits: metricsRecord?.activeUsers || 0,
+            clubCount,
+            eventCount
+        },
+        version: Date.now()
+    };
+};
+
+export const getBootstrapData = async (req: Request, res: Response) => {
+    try {
+        const cached = getCache('bootstrap');
+        if (cached) {
+            res.setHeader('X-Cache', 'HIT');
+            return res.json(cached);
+        }
+
+        const bootstrapData = await fetchFullBootstrapPayload();
+        setCache('bootstrap', bootstrapData);
+        res.setHeader('X-Cache', 'MISS');
+        res.json(bootstrapData);
+    } catch (error) {
+        console.error('Error fetching bootstrap data:', error);
+        res.status(500).json({ error: 'Failed to fetch bootstrap data' });
+    }
+};
+

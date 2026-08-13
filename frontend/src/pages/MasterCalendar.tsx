@@ -14,6 +14,9 @@ import { EventDetailModal } from '../components/calendar/EventDetailModal';
 import { EditEventModal } from '../components/calendar/EditEventModal';
 import { MobileFilterDropdown } from '../components/MobileFilterDropdown';
 import { PrintSchedule } from '../components/calendar/PrintSchedule';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { useAppData } from '../context/DataContext';
+import { filterRecurringEvents } from '../utils/recurringUtils';
 
 interface Event {
     id: string; title: string; date: string; endDate?: string | null; description?: string;
@@ -34,56 +37,52 @@ const useIsMobile = () => {
 };
 
 // Color-coding for event types
-const getEventStyle = (clubName: string, categoryColor?: string | null): React.CSSProperties => {
+const getEventStyle = (_clubName?: string, categoryColor?: string | null): React.CSSProperties => {
     if (categoryColor) {
-        return { background: categoryColor, color: '#fff' };
+        return { background: categoryColor, color: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)' };
     }
-    const hash = Array.from(clubName).reduce((h, c) => c.charCodeAt(0) + ((h << 5) - h), 0);
-    const styles: React.CSSProperties[] = [
-        { background: 'var(--red)', color: '#fff' },
-        { background: 'var(--black)', color: '#fff' },
-        { background: 'var(--gray-800)', color: '#fff' },
-    ];
-    return styles[Math.abs(hash) % styles.length];
+    return { background: '#0F172A', color: '#FFFFFF', border: '1px solid rgba(0,0,0,0.1)' };
 };
 
 export const MasterCalendar = () => {
+    usePageTitle('Master Calendar');
+    const { events, clubs, categories, deleteOptimisticEvent, refreshData, loading } = useAppData();
+
     const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
     const [month, setMonth] = useState(new Date());
-    const [events, setEvents] = useState<Event[]>([]);
-    const [clubs, setClubs] = useState<any[]>([]);
-    const [categories, setCategories] = useState<{ name: string, color: string }[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [hovered, setHovered] = useState<Event | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [followedOnly, setFollowedOnly] = useState(false);
-    const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [followedClubIds] = useState<string[]>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
+        } catch {
+            return [];
+        }
+    });
     const navigate = useNavigate();
     const isMobile = useIsMobile();
 
     const refreshEvents = () => {
-        fetch(`${import.meta.env.VITE_API_URL}/api/events?_t=${Date.now()}`)
-            .then(r => r.json())
-            .then(setEvents)
-            .catch(console.error);
+        refreshData('events');
+    };
+
+    const handleExportPDF = () => {
+        const originalTitle = document.title;
+        document.title = '';
+        window.print();
+        setTimeout(() => {
+            document.title = originalTitle || 'Master Calendar | BCSS Calendar';
+        }, 1000);
     };
 
     useEffect(() => {
-        Promise.all([
-            fetch(`${import.meta.env.VITE_API_URL}/api/events`).then(r => r.json()).then(setEvents),
-            fetch(`${import.meta.env.VITE_API_URL}/api/clubs`).then(r => r.json()).then(setClubs),
-            fetch(`${import.meta.env.VITE_API_URL}/api/categories`).then(r => r.json()).then(setCategories),
-            fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify`, { credentials: 'include' })
-                .then(r => setIsAdmin(r.ok)).catch(() => setIsAdmin(false))
-        ])
-        .catch(console.error)
-        .finally(() => setLoading(false));
-
-        const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
-        setFollowedClubIds(followed);
+        fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify`, { credentials: 'include' })
+            .then(r => setIsAdmin(r.ok))
+            .catch(() => setIsAdmin(false));
     }, []);
 
     const handleDelete = async (event: Event) => {
@@ -95,22 +94,17 @@ export const MasterCalendar = () => {
             allFuture = window.confirm('This is a recurring event series.\n\nClick OK to ALSO delete ALL FUTURE occurrences.\nClick Cancel to ONLY delete this specific date.');
         }
 
+        deleteOptimisticEvent(event.id);
+
         const r = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${event.id}?allFuture=${allFuture}`, { method: 'DELETE', credentials: 'include' });
         if (r.ok) {
-            if (allFuture) {
-                setLoading(true);
-                fetch(`${import.meta.env.VITE_API_URL}/api/events`)
-                    .then(r => r.json())
-                    .then(setEvents)
-                    .catch(console.error)
-                    .finally(() => setLoading(false));
-            } else {
-                setEvents(events.filter(e => e.id !== event.id));
-            }
+            refreshData('events');
+        } else {
+            refreshData('events');
         }
     };
 
-    const displayEvents = events.filter(ev => {
+    const displayEvents = filterRecurringEvents(events).filter(ev => {
         let categoryMatch = false;
         if (selectedCategories.length === 0) {
             categoryMatch = true;
@@ -125,18 +119,29 @@ export const MasterCalendar = () => {
 
     const resolveEventStyle = (ev: Event) => {
         let primaryColor = null;
+
+        // 1. If event has tags, match to the category color
         if (ev.tags && ev.tags.length > 0) {
             for (const tag of ev.tags) {
-                const matchedCategory = categories.find(c => c.name === tag);
+                if (tag.toLowerCase().trim() === 'school event') continue;
+                const matchedCategory = categories.find(c => c.name.toLowerCase().trim() === tag.toLowerCase().trim());
                 if (matchedCategory) {
                     primaryColor = matchedCategory.color;
                     break;
                 }
             }
         }
-        if (!primaryColor) {
-            primaryColor = categories.find(c => c.name === ev.club?.category)?.color || null;
+
+        // 2. If no tag color matched, check club category
+        if (!primaryColor && ev.club?.category && ev.club.category !== 'School Event') {
+            primaryColor = categories.find(c => c.name.toLowerCase().trim() === ev.club?.category?.toLowerCase().trim())?.color || null;
         }
+
+        // 3. Untagged events that say School Event only -> recolor to black (#0F172A)
+        if (!primaryColor) {
+            return { background: '#0F172A', color: '#FFFFFF', border: '1px solid rgba(0,0,0,0.1)' };
+        }
+
         return getEventStyle(ev.club?.name || 'School Event', primaryColor);
     };
 
@@ -148,9 +153,8 @@ export const MasterCalendar = () => {
         }
     };
 
-    // Build filter options for mobile dropdown
     const filterOptions = [
-        { name: 'Followed Clubs', color: undefined, selected: followedOnly },
+        { name: 'Followed Clubs', selected: followedOnly },
         ...categories.map(cat => ({ name: cat.name, color: cat.color, selected: selectedCategories.includes(cat.name) })),
     ];
 
@@ -165,159 +169,309 @@ export const MasterCalendar = () => {
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
             <Helmet>
-                <title>Calendar | Wildcat Calendar</title>
+                <title>Master Calendar | BCSS Calendar</title>
             </Helmet>
-            {/* Header */}
-            <div style={{ position: 'relative', zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
-                <div>
-                    <h1 style={{ fontSize: '2.4rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-                        {view === 'agenda' ? 'Agenda' : format(month, 'MMMM yyyy')}
-                    </h1>
-                    {isMobile ? (
-                        <div style={{ marginTop: '12px' }}>
-                            <MobileFilterDropdown options={filterOptions} onToggle={handleFilterToggle} />
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-                            <button
-                                onClick={() => setFollowedOnly(!followedOnly)}
-                                className="pill"
-                                style={{
-                                    cursor: 'pointer', border: 'none', padding: '6px 14px', fontSize: '0.75rem',
-                                    background: followedOnly ? 'var(--red)' : 'var(--white)',
-                                    color: followedOnly ? '#fff' : 'var(--gray-700)',
-                                    boxShadow: followedOnly ? 'none' : '0 0 0 1px var(--gray-300)',
-                                    transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px'
-                                }}
-                            >
-                                <Heart size={14} fill={followedOnly ? 'currentColor' : 'none'} />
-                                Your Followed Clubs
-                            </button>
-                            <div style={{ width: '1px', background: 'var(--gray-300)', margin: '0 4px' }} />
-                            {categories.map(cat => (
+            
+            {/* Header Control Panel */}
+            <div style={{ 
+                position: 'relative', 
+                zIndex: 100, 
+                display: 'flex', 
+                flexDirection: 'column',
+                marginBottom: isMobile ? '20px' : '28px', 
+                gap: '14px' 
+            }}>
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    flexWrap: 'wrap', 
+                    gap: '12px' 
+                }}>
+                    <div>
+                        <h1 style={{ fontSize: 'clamp(1.5rem, 3.2vw, 2.5rem)', fontFamily: 'var(--font-display)', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1, color: 'var(--text-main)', margin: 0 }}>
+                            {view === 'agenda' ? 'School Agenda' : format(month, 'MMMM yyyy')}
+                        </h1>
+                        {isMobile ? (
+                            <div style={{ marginTop: '10px' }}>
+                                <MobileFilterDropdown options={filterOptions} onToggle={handleFilterToggle} />
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
                                 <button
-                                    key={cat.name}
-                                    onClick={() => toggleCategory(cat.name)}
-                                    className="pill"
+                                    onClick={() => setFollowedOnly(!followedOnly)}
+                                    className={`pill ${followedOnly ? 'pill-red' : 'pill-dark'}`}
                                     style={{
-                                        cursor: 'pointer', border: 'none', padding: '6px 14px', fontSize: '0.75rem',
-                                        background: selectedCategories.includes(cat.name) ? cat.color : 'var(--white)',
-                                        color: selectedCategories.includes(cat.name) ? '#fff' : 'var(--gray-700)',
-                                        boxShadow: selectedCategories.includes(cat.name) ? 'none' : '0 0 0 1px var(--gray-300)',
-                                        transition: 'all 0.2s ease',
-                                        display: 'flex',
-                                        alignItems: 'center',
+                                        cursor: 'pointer', 
+                                        padding: '7px 16px', 
+                                        fontSize: '0.78rem',
+                                        transition: 'all 0.2s ease', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
                                         gap: '6px'
                                     }}
                                 >
-                                    {!selectedCategories.includes(cat.name) && (
-                                        <span style={{ 
-                                            display: 'inline-block', 
-                                            width: '8px', 
-                                            height: '8px', 
-                                            borderRadius: '50%', 
-                                            background: cat.color,
-                                            flexShrink: 0
-                                        }} />
-                                    )}
-                                    {cat.name}
+                                    <Heart size={14} fill={followedOnly ? 'currentColor' : 'none'} />
+                                    Your Followed Clubs
                                 </button>
-                            ))}
-                        </div>
-                    )}
+                                <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
+                                {categories.map(cat => {
+                                    const isSelected = selectedCategories.includes(cat.name);
+                                    return (
+                                        <button
+                                            key={cat.name}
+                                            onClick={() => toggleCategory(cat.name)}
+                                            className={`pill ${isSelected ? 'pill-red' : 'pill-dark'}`}
+                                            style={{
+                                                cursor: 'pointer', 
+                                                padding: '7px 16px', 
+                                                fontSize: '0.78rem',
+                                                transition: 'all 0.2s ease', 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                gap: '6px',
+                                                background: isSelected ? cat.color : undefined,
+                                                borderColor: isSelected ? 'transparent' : undefined,
+                                                color: isSelected ? '#fff' : undefined,
+                                            }}
+                                        >
+                                            {!isSelected && (
+                                                <span style={{ 
+                                                    display: 'inline-block', 
+                                                    width: '8px', 
+                                                    height: '8px', 
+                                                    borderRadius: '50%', 
+                                                    background: cat.color,
+                                                    flexShrink: 0
+                                                }} />
+                                            )}
+                                            {cat.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
+                {/* Unified Responsive Toolbar (Zero Horizontal Scroll on all resolutions) */}
                 <div style={{
-                    display: 'flex', gap: isMobile ? '6px' : '12px', alignItems: 'center',
-                    background: 'var(--white)', padding: '6px', borderRadius: 'var(--radius-pill)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid var(--border)',
-                    overflowX: 'auto', maxWidth: '100%', flexShrink: 0,
+                    display: 'flex', 
+                    gap: '8px', 
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    width: isMobile ? '100%' : 'fit-content',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
                 }}>
-                    <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                        <button onClick={() => setView('month')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'month' ? 'var(--gray-100)' : 'transparent', color: view === 'month' ? 'var(--red)' : 'var(--text-muted)' }} title="Month"><LayoutGrid size={18} /></button>
-                        <button onClick={() => setView('week')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'week' ? 'var(--gray-100)' : 'transparent', color: view === 'week' ? 'var(--red)' : 'var(--text-muted)' }} title="Week"><CalIcon size={18} /></button>
-                        <button onClick={() => setView('day')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'day' ? 'var(--gray-100)' : 'transparent', color: view === 'day' ? 'var(--red)' : 'var(--text-muted)' }} title="Day"><Map size={18} /></button>
-                        <button onClick={() => setView('agenda')} className="btn btn-ghost" style={{ padding: '8px', background: view === 'agenda' ? 'var(--gray-100)' : 'transparent', color: view === 'agenda' ? 'var(--red)' : 'var(--text-muted)' }} title="Agenda"><List size={18} /></button>
+                    {/* View Switcher Pill */}
+                    <div style={{
+                        display: 'flex',
+                        gap: '3px',
+                        alignItems: 'center',
+                        background: '#FFFFFF',
+                        padding: isMobile ? '4px 6px' : '6px 10px',
+                        borderRadius: 'var(--radius-pill)',
+                        boxShadow: 'var(--shadow-sm)',
+                        border: '1px solid var(--border)',
+                    }}>
+                        <button 
+                            onClick={() => setView('month')} 
+                            className="btn btn-ghost" 
+                            style={{ 
+                                width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', padding: 0,
+                                borderRadius: '50%',
+                                background: view === 'month' ? 'var(--bcss-red-soft)' : 'transparent', 
+                                color: view === 'month' ? 'var(--bcss-red)' : 'var(--text-secondary)',
+                                border: view === 'month' ? '1px solid rgba(217,4,41,0.3)' : '1px solid transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }} 
+                            title="Month View"
+                        >
+                            <LayoutGrid size={isMobile ? 15 : 16} />
+                        </button>
+                        <button 
+                            onClick={() => setView('week')} 
+                            className="btn btn-ghost" 
+                            style={{ 
+                                width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', padding: 0,
+                                borderRadius: '50%',
+                                background: view === 'week' ? 'var(--bcss-red-soft)' : 'transparent', 
+                                color: view === 'week' ? 'var(--bcss-red)' : 'var(--text-secondary)',
+                                border: view === 'week' ? '1px solid rgba(217,4,41,0.3)' : '1px solid transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }} 
+                            title="Week View"
+                        >
+                            <CalIcon size={isMobile ? 15 : 16} />
+                        </button>
+                        <button 
+                            onClick={() => setView('day')} 
+                            className="btn btn-ghost" 
+                            style={{ 
+                                width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', padding: 0,
+                                borderRadius: '50%',
+                                background: view === 'day' ? 'var(--bcss-red-soft)' : 'transparent', 
+                                color: view === 'day' ? 'var(--bcss-red)' : 'var(--text-secondary)',
+                                border: view === 'day' ? '1px solid rgba(217,4,41,0.3)' : '1px solid transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }} 
+                            title="Day View"
+                        >
+                            <Map size={isMobile ? 15 : 16} />
+                        </button>
+                        <button 
+                            onClick={() => setView('agenda')} 
+                            className="btn btn-ghost" 
+                            style={{ 
+                                width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', padding: 0,
+                                borderRadius: '50%',
+                                background: view === 'agenda' ? 'var(--bcss-red-soft)' : 'transparent', 
+                                color: view === 'agenda' ? 'var(--bcss-red)' : 'var(--text-secondary)',
+                                border: view === 'agenda' ? '1px solid rgba(217,4,41,0.3)' : '1px solid transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }} 
+                            title="Agenda View"
+                        >
+                            <List size={isMobile ? 15 : 16} />
+                        </button>
                     </div>
 
-                    <div style={{ height: '24px', width: '1px', background: 'var(--border)', flexShrink: 0 }} />
-                    <div style={{ display: 'flex', gap: isMobile ? '4px' : '10px', alignItems: 'center', flexShrink: 0 }}>
+                    {/* Navigation & Action Controls Pill */}
+                    <div style={{
+                        display: 'flex', 
+                        gap: isMobile ? '3px' : '6px', 
+                        alignItems: 'center',
+                        background: '#FFFFFF',
+                        padding: isMobile ? '4px 6px' : '6px 10px',
+                        borderRadius: 'var(--radius-pill)',
+                        boxShadow: 'var(--shadow-sm)',
+                        border: '1px solid var(--border)',
+                    }}>
                         <button 
-                            onClick={() => window.print()} 
+                            onClick={handleExportPDF} 
                             className="btn btn-outline" 
                             style={{ 
-                                height: '36px', 
-                                padding: '0 12px', 
-                                gap: '6px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center' 
+                                width: isMobile ? '30px' : '34px', 
+                                height: isMobile ? '30px' : '34px', 
+                                padding: 0, 
+                                borderRadius: '50%',
+                                color: 'var(--text-main)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: '#FFFFFF'
                             }} 
                             title="Export PDF Schedule"
                         >
-                            <Printer size={16} /> {!isMobile && 'Export PDF'}
+                            <Printer size={14} />
                         </button>
+
                         {isAdmin && (
-                            <button onClick={() => navigate('/admin/dashboard')} className="btn btn-red" style={{ height: '36px', padding: '0 12px', gap: '6px' }}>
-                                <Plus size={16} />
+                            <button 
+                                onClick={() => navigate('/admin/dashboard')} 
+                                className="btn btn-red" 
+                                style={{ 
+                                    width: isMobile ? '30px' : '34px', 
+                                    height: isMobile ? '30px' : '34px', 
+                                    borderRadius: '50%', 
+                                    padding: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}
+                                title="Create Event"
+                            >
+                                <Plus size={15} />
                             </button>
                         )}
-                        <button onClick={() => setMonth(view === 'month' || view === 'agenda' ? subMonths(month, 1) : addDays(month, view === 'week' ? -7 : -1))} className="btn btn-ghost" style={{
-                            width: '36px', height: '36px', borderRadius: '50%', border: '1px solid var(--border)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: 'var(--text)',
-                        }}>
-                            <ChevronLeft size={20} />
+
+                        <button 
+                            onClick={() => setMonth(view === 'month' || view === 'agenda' ? subMonths(month, 1) : addDays(month, view === 'week' ? -7 : -1))} 
+                            className="btn btn-outline" 
+                            style={{ 
+                                width: isMobile ? '30px' : '34px', 
+                                height: isMobile ? '30px' : '34px', 
+                                borderRadius: '50%', 
+                                padding: 0, 
+                                color: 'var(--text-main)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: '#FFFFFF'
+                            }}
+                            title="Previous"
+                        >
+                            <ChevronLeft size={15} />
                         </button>
-                        <button onClick={() => setMonth(new Date())} className="btn btn-outline" style={{ height: '36px', padding: '0 12px', fontSize: '0.82rem' }}>
+
+                        <button 
+                            onClick={() => setMonth(new Date())} 
+                            className="btn btn-outline" 
+                            style={{ 
+                                height: isMobile ? '30px' : '34px', 
+                                padding: isMobile ? '0 8px' : '0 12px', 
+                                borderRadius: 'var(--radius-pill)', 
+                                fontSize: isMobile ? '0.74rem' : '0.82rem', 
+                                fontWeight: 800, 
+                                color: 'var(--text-main)',
+                                background: '#FFFFFF'
+                            }}
+                        >
                             Today
                         </button>
-                        <button onClick={() => setMonth(view === 'month' || view === 'agenda' ? addMonths(month, 1) : addDays(month, view === 'week' ? 7 : 1))} className="btn btn-ghost" style={{
-                            width: '36px', height: '36px', borderRadius: '50%', border: '1px solid var(--border)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: 'var(--text)',
-                        }}>
-                            <ChevronRight size={20} />
+
+                        <button 
+                            onClick={() => setMonth(view === 'month' || view === 'agenda' ? addMonths(month, 1) : addDays(month, view === 'week' ? 7 : 1))} 
+                            className="btn btn-outline" 
+                            style={{ 
+                                width: isMobile ? '30px' : '34px', 
+                                height: isMobile ? '30px' : '34px', 
+                                borderRadius: '50%', 
+                                padding: 0, 
+                                color: 'var(--text-main)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: '#FFFFFF'
+                            }}
+                            title="Next"
+                        >
+                            <ChevronRight size={15} />
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Calendar Views */}
-            <div style={{ minHeight: '500px' }}>
+            {/* Calendar Main Container */}
+            <div style={{ minHeight: '520px' }}>
                 {loading ? (
-                    <div style={{
+                    <div className="card" style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         padding: '100px 20px', textAlign: 'center', animation: 'fadeUp 0.4s ease both',
-                        background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)'
                     }}>
                         <div style={{
-                            width: '80px', height: '80px', borderRadius: '50%', background: 'var(--gray-200)',
+                            width: '70px', height: '70px', borderRadius: '50%', background: 'var(--red-soft)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
                         }}>
                             <div className="loading-spinner" />
                         </div>
-                        <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '8px' }}>
-                            Loading Calendar...
+                        <h3 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '8px', color: '#FFF' }}>
+                            Loading Master Calendar...
                         </h3>
                     </div>
                 ) : displayEvents.length === 0 ? (
-                    <div style={{
+                    <div className="card" style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         padding: '100px 20px', textAlign: 'center', animation: 'fadeUp 0.4s ease both',
-                        background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)'
                     }}>
                         <div style={{
-                            width: '80px', height: '80px', borderRadius: '50%', background: 'var(--gray-200)',
+                            width: '80px', height: '80px', borderRadius: '50%', background: 'var(--red-soft)',
+                            border: '1px solid rgba(255,46,84,0.3)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
                         }}>
-                            <CalIcon size={32} style={{ color: 'var(--gray-400)' }} />
+                            <CalIcon size={32} style={{ color: 'var(--red)' }} />
                         </div>
-                        <h3 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '8px' }}>
-                            {selectedCategories.length > 0 || followedOnly ? 'No matching events' : 'No events scheduled'}
+                        <h3 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '8px', color: '#FFF' }}>
+                            {selectedCategories.length > 0 || followedOnly ? 'No matching events found' : 'No events scheduled'}
                         </h3>
-                        <p style={{ color: 'var(--text-muted)', maxWidth: '360px', margin: '0 auto', fontSize: '0.92rem' }}>
+                        <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto', fontSize: '0.95rem' }}>
                             {selectedCategories.length > 0 || followedOnly 
-                                ? 'Try adjusting your filters above to see more events.' 
-                                : 'There are no events scheduled on the calendar right now.'}
+                                ? 'Try adjusting your category or club filters above to reveal scheduled events.' 
+                                : 'There are no events currently on the Burnaby Central master calendar for this period.'}
                         </p>
                     </div>
                 ) : (
@@ -330,7 +484,7 @@ export const MasterCalendar = () => {
                 )}
             </div>
 
-            {/* Event Details & Edit Modals Portaled to Body */}
+            {/* Event Modals */}
             {createPortal(
                 <>
                     <EventDetailModal
@@ -369,6 +523,7 @@ export const MasterCalendar = () => {
                         }
                     })} 
                     title={format(month, 'MMMM yyyy')} 
+                    categories={categories}
                 />,
                 document.body
             )}

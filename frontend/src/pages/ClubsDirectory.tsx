@@ -1,218 +1,372 @@
-import { useState, useEffect } from 'react';
-import { Search, X, Heart } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Search, Heart, Filter, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { MobileFilterDropdown } from '../components/MobileFilterDropdown';
-
-interface Club {
-    id: string; name: string; category: string; description: string;
-    instagram?: string; discord?: string; imageUrl?: string;
-}
-
-const useIsMobile = () => {
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-    useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth <= 768);
-        window.addEventListener('resize', handler);
-        return () => window.removeEventListener('resize', handler);
-    }, []);
-    return isMobile;
-};
+import { SkeletonClubCard } from '../components/Skeleton';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { useAppData } from '../context/DataContext';
 
 export const ClubsDirectory = () => {
-    const [clubs, setClubs] = useState<Club[]>([]);
-    const [search, setSearch] = useState('');
-    const [category, setCategory] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+    usePageTitle('Clubs Directory');
+    const { clubs, categories, loading } = useAppData();
+    const [activeCategory, setActiveCategory] = useState<string>('All');
+    const [searchQuery, setSearchQuery] = useState('');
     const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     const isMobile = useIsMobile();
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_API_URL}/api/clubs`)
-            .then(r => r.json())
-            .then(data => { setClubs(data); setLoading(false); })
-            .catch(() => setLoading(false));
-
         const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
         setFollowedClubIds(followed);
     }, []);
 
-    const categories = Array.from(new Set(clubs.map(c => c.category)));
-    const filtered = clubs.filter(c => {
-        const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase());
-        return matchSearch && (!category || c.category === category);
-    });
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, []);
 
-    // Build filter options for mobile
-    const filterOptions = [
-        { name: 'All', selected: !category },
-        ...categories.map(cat => ({ name: cat, selected: category === cat })),
-    ];
-
-    const handleFilterToggle = (name: string) => {
-        if (name === 'All') {
-            setCategory(null);
+    const toggleFollow = (e: React.MouseEvent, clubId: string) => {
+        e.stopPropagation();
+        let updated;
+        if (followedClubIds.includes(clubId)) {
+            updated = followedClubIds.filter(id => id !== clubId);
         } else {
-            setCategory(category === name ? null : name);
+            updated = [...followedClubIds, clubId];
         }
+        setFollowedClubIds(updated);
+        localStorage.setItem('bcss_followed_clubs', JSON.stringify(updated));
     };
+
+    const filteredClubs = [...clubs]
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+        .filter(club => {
+            const matchesCategory = activeCategory === 'All' || club.category === activeCategory;
+            const matchesSearch = club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (club.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesCategory && matchesSearch;
+        });
 
     return (
         <div style={{ animation: 'fadeUp 0.4s ease both' }}>
             <Helmet>
-                <title>Directory | Wildcat Calendar</title>
+                <title>Clubs Directory | BCSS Calendar</title>
             </Helmet>
-            <style>
-                {`
-                .clubs-grid {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 20px;
-                }
-                @media (max-width: 1200px) {
-                    .clubs-grid { grid-template-columns: repeat(3, 1fr); }
-                }
-                @media (max-width: 900px) {
-                    .clubs-grid { grid-template-columns: repeat(2, 1fr); }
-                }
-                @media (max-width: 600px) {
-                    .clubs-grid { grid-template-columns: 1fr; }
-                }
-                `}
-            </style>
-            <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '2.2rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em' }}>
-                    Clubs Directory
+
+            {/* Header Banner */}
+            <div style={{ marginBottom: '28px' }}>
+                <h1 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 900, fontFamily: 'var(--font-display)', marginBottom: '8px', color: 'var(--text-main)' }}>
+                    Student Clubs Directory
                 </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '6px' }}>
-                    Find your community at Burnaby Central.
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
+                    Discover active Burnaby Central student clubs.
                 </p>
             </div>
 
-            {/* Search & Filters */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px', animation: 'fadeUp 0.4s ease 0.1s both', position: 'relative', zIndex: 100 }}>
-                <div style={{ position: 'relative', width: '100%' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
-                    <input
-                        className="input"
-                        style={{ paddingLeft: '42px', width: '100%' }}
-                        placeholder="Search clubs..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                </div>
-                {isMobile ? (
-                    <MobileFilterDropdown
-                        options={filterOptions}
-                        onToggle={handleFilterToggle}
-                        label="Category"
-                    />
-                ) : (
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        <button onClick={() => setCategory(null)} className="pill" style={{
-                            cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
-                            background: !category ? 'var(--black)' : 'var(--white)',
-                            color: !category ? '#fff' : 'var(--gray-700)',
-                            boxShadow: !category ? 'none' : '0 0 0 1.5px var(--gray-300)',
-                            transition: 'all 0.2s ease',
-                        }}>
-                            All
-                        </button>
-                        {categories.map(cat => (
-                            <button key={cat} onClick={() => setCategory(cat)} className="pill" style={{
-                                cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: '0.78rem',
-                                background: category === cat ? 'var(--black)' : 'var(--white)',
-                                color: category === cat ? '#fff' : 'var(--gray-700)',
-                                boxShadow: category === cat ? 'none' : '0 0 0 1.5px var(--gray-300)',
-                                transition: 'all 0.2s ease',
-                            }}>
-                                {cat}
-                            </button>
-                        ))}
+            {/* Search & Filter Control Hub */}
+            <div className="card" style={{ padding: isMobile ? '12px 14px' : '16px 20px', marginBottom: isMobile ? '20px' : '28px', background: '#FFFFFF', position: 'relative', zIndex: 50 }}>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {/* Search Input */}
+                    <div style={{ flex: 1, minWidth: isMobile ? '100%' : '260px', position: 'relative' }}>
+                        <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                        <input
+                            className="input"
+                            type="text"
+                            placeholder="Search by club name or keyword..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            style={{ paddingLeft: '44px', height: '42px' }}
+                        />
                     </div>
-                )}
+
+                    {/* Category Dropdown Filter matching exact UI design */}
+                    <div ref={dropdownRef} style={{ position: 'relative', width: isMobile ? '100%' : 'auto' }}>
+                        <button
+                            type="button"
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                            className="btn btn-outline"
+                            style={{
+                                height: '42px',
+                                padding: '0 16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '10px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border-strong)',
+                                background: activeCategory !== 'All' ? 'var(--bcss-red-soft)' : '#FFFFFF',
+                                color: activeCategory !== 'All' ? 'var(--bcss-red)' : 'var(--text-main)',
+                                fontWeight: 800,
+                                fontSize: '0.9rem',
+                                fontFamily: 'var(--font-display)',
+                                cursor: 'pointer',
+                                boxShadow: 'var(--shadow-sm)',
+                                width: isMobile ? '100%' : 'auto',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Filter size={16} />
+                                <span>{activeCategory === 'All' ? 'Category' : activeCategory}</span>
+                            </div>
+                            {dropdownOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+
+                        {/* Dropdown Menu Popup */}
+                        {dropdownOpen && (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    top: 'calc(100% + 6px)',
+                                    left: 0,
+                                    right: isMobile ? 0 : 'auto',
+                                    zIndex: 1000,
+                                    background: '#FFFFFF',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.12)',
+                                    minWidth: '250px',
+                                    maxHeight: '380px',
+                                    overflowY: 'auto',
+                                    padding: '6px 0',
+                                    animation: 'fadeUp 0.15s ease both',
+                                }}
+                            >
+                                {/* Option: All */}
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => { setActiveCategory('All'); setDropdownOpen(false); }}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        padding: '10px 18px',
+                                        cursor: 'pointer',
+                                        fontSize: '0.92rem',
+                                        fontWeight: 800,
+                                        fontFamily: 'var(--font-display)',
+                                        color: activeCategory === 'All' ? 'var(--text-main)' : '#475569',
+                                        background: activeCategory === 'All' ? '#F8FAFC' : 'transparent',
+                                        transition: 'background 0.15s ease',
+                                        userSelect: 'none',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = '#F1F5F9')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = activeCategory === 'All' ? '#F8FAFC' : 'transparent')}
+                                >
+                                    <div style={{
+                                        width: '18px',
+                                        height: '18px',
+                                        borderRadius: '4px',
+                                        border: activeCategory === 'All' ? 'none' : '1.5px solid #CBD5E1',
+                                        background: activeCategory === 'All' ? 'var(--bcss-red)' : '#FFFFFF',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                        transition: 'all 0.15s ease',
+                                    }}>
+                                        {activeCategory === 'All' && <Check size={12} strokeWidth={3.5} color="#FFFFFF" />}
+                                    </div>
+                                    <span>All</span>
+                                </div>
+
+                                {/* Category Options */}
+                                {categories.map(cat => {
+                                    const isSelected = activeCategory === cat.name;
+                                    return (
+                                        <div
+                                            key={cat.name}
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => { setActiveCategory(cat.name); setDropdownOpen(false); }}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '12px',
+                                                padding: '10px 18px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.92rem',
+                                                fontWeight: 800,
+                                                fontFamily: 'var(--font-display)',
+                                                color: isSelected ? 'var(--text-main)' : '#475569',
+                                                background: isSelected ? '#F8FAFC' : 'transparent',
+                                                transition: 'background 0.15s ease',
+                                                userSelect: 'none',
+                                            }}
+                                            onMouseEnter={(e) => (e.currentTarget.style.background = '#F1F5F9')}
+                                            onMouseLeave={(e) => (e.currentTarget.style.background = isSelected ? '#F8FAFC' : 'transparent')}
+                                        >
+                                            <div style={{
+                                                width: '18px',
+                                                height: '18px',
+                                                borderRadius: '4px',
+                                                border: isSelected ? 'none' : '1.5px solid #CBD5E1',
+                                                background: isSelected ? 'var(--bcss-red)' : '#FFFFFF',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                                transition: 'all 0.15s ease',
+                                            }}>
+                                                {isSelected && <Check size={12} strokeWidth={3.5} color="#FFFFFF" />}
+                                            </div>
+                                            <span>{cat.name}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            {/* Grid */}
-            {loading ? (
-                <div className="clubs-grid">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                        <div key={i} className="shimmer-bg" style={{ height: '340px', borderRadius: 'var(--radius-lg)' }} />
-                    ))}
-                </div>
-            ) : filtered.length > 0 ? (
-                <div key={`${category || 'all'}-${search}`} className="clubs-grid" style={{ animation: 'fadeUp 0.4s ease 0.15s both' }}>
-                    {filtered.map((club, idx) => (
-                        <div key={club.id} className="card card-hover" onClick={() => navigate(`/clubs/${club.id}`)} style={{
-                            display: 'flex', flexDirection: 'column',
-                            animation: `fadeUp 0.4s ease ${0.1 + idx * 0.04}s both`, cursor: 'pointer', overflow: 'hidden'
-                        }}>
-                            {/* Card Thumbnail */}
-                            <div style={{ aspectRatio: '21 / 9', overflow: 'hidden', flexShrink: 0 }}>
-                                {club.imageUrl ? (
-                                    <img src={club.imageUrl} alt={club.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                    <div style={{
-                                        width: '100%', height: '100%',
-                                        background: 'linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    }}>
-                                        <span style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--gray-300)' }}>
-                                            {club.name.charAt(0)}
-                                        </span>
+            {/* Club Grid View */}
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(280px, 28vw, 360px), 1fr))', 
+                gap: 'clamp(16px, 2.5vw, 24px)' 
+            }}>
+                {loading ? (
+                    Array.from({ length: 6 }).map((_, i) => <SkeletonClubCard key={i} />)
+                ) : filteredClubs.length > 0 ? (
+                    filteredClubs.map(club => {
+                        const isFollowed = followedClubIds.includes(club.id);
+
+                        return (
+                            <div
+                                key={club.id}
+                                className="card card-hover"
+                                onClick={() => navigate(`/clubs/${club.id}`)}
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'space-between',
+                                    cursor: 'pointer',
+                                    overflow: 'hidden',
+                                    background: '#FFFFFF',
+                                }}
+                            >
+                                {/* Card Image Area: Fits within and completely fills the given area */}
+                                <div style={{ 
+                                    position: 'relative', 
+                                    width: '100%', 
+                                    aspectRatio: '21 / 9', 
+                                    overflow: 'hidden',
+                                    background: 'var(--bg-secondary)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                }}>
+                                    {club.imageUrl ? (
+                                        <img
+                                            src={club.imageUrl}
+                                            alt={club.name}
+                                            loading="lazy"
+                                            decoding="async"
+                                            style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                                objectPosition: 'center',
+                                                display: 'block',
+                                                transition: 'transform 0.35s ease',
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            background: '#E2E8F0',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '20px',
+                                            textAlign: 'center',
+                                        }}>
+                                            <span style={{
+                                                fontSize: '1.2rem',
+                                                fontWeight: 900,
+                                                fontFamily: 'var(--font-display)',
+                                                color: '#334155',
+                                                lineHeight: 1.25,
+                                                letterSpacing: '-0.01em',
+                                            }}>
+                                                {club.name}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Follow Button Floating Overlay */}
+                                    <button
+                                        onClick={(e) => toggleFollow(e, club.id)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '12px',
+                                            right: '12px',
+                                            zIndex: 2,
+                                            background: 'rgba(255, 255, 255, 0.95)',
+                                            backdropFilter: 'blur(8px)',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            color: isFollowed ? 'var(--bcss-red)' : 'var(--text-muted)',
+                                            boxShadow: 'var(--shadow-sm)',
+                                        }}
+                                        title={isFollowed ? 'Unfollow Club' : 'Follow Club'}
+                                    >
+                                        <Heart size={18} fill={isFollowed ? 'currentColor' : 'none'} />
+                                    </button>
+                                </div>
+
+                                {/* Club Details Content */}
+                                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-main)', fontFamily: 'var(--font-display)', marginBottom: '8px', lineHeight: 1.25 }}>
+                                            {club.name}
+                                        </h3>
+
+                                        <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {club.description}
+                                        </p>
                                     </div>
-                                )}
-                            </div>
-                            <div style={{ padding: '20px 24px 16px', flex: 1 }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: '10px', gap: '8px' }}>
-                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>
-                                        {club.name}
-                                    </h3>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                        {followedClubIds.includes(club.id) && (
-                                            <Heart size={16} fill="var(--red)" color="var(--red)" />
-                                        )}
-                                        <span className="pill pill-dark" style={{ flexShrink: 0 }}>
-                                            {club.category}
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+                                        <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--bcss-red)' }}>
+                                            View Club Profile &rarr;
                                         </span>
                                     </div>
                                 </div>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', whiteSpace: 'normal', marginTop: '4px' }}>
-                                    {club.description}
-                                </p>
                             </div>
-                            <div style={{ padding: '0 24px 24px', marginTop: 'auto' }}>
-                                <button className="btn btn-outline" style={{ width: '100%', borderColor: 'transparent', background: 'var(--gray-100)' }}>
-                                    View Details
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                /* Empty State */
-                <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    padding: '80px 20px', textAlign: 'center', animation: 'fadeUp 0.4s ease both',
-                }}>
-                    <div style={{
-                        width: '80px', height: '80px', borderRadius: '50%', background: 'var(--gray-200)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
-                    }}>
-                        <Search size={32} style={{ color: 'var(--gray-400)' }} />
+                        );
+                    })
+                ) : (
+                    <div className="card" style={{ gridColumn: '1 / -1', padding: '60px 24px', textAlign: 'center', background: '#FFFFFF' }}>
+                        <h3 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '8px', color: 'var(--text-main)' }}>
+                            No clubs found
+                        </h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                            Try searching for another keyword or selecting a different category filter.
+                        </p>
                     </div>
-                    <h3 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '8px' }}>
-                        No clubs found
-                    </h3>
-                    <p style={{ color: 'var(--text-muted)', maxWidth: '360px', marginBottom: '24px' }}>
-                        No clubs match "{search}" in this category.
-                    </p>
-                    <button onClick={() => { setSearch(''); setCategory(null); }} className="btn btn-red">
-                        <X size={16} /> Clear Filters
-                    </button>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };

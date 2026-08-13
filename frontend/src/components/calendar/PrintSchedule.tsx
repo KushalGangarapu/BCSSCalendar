@@ -3,35 +3,41 @@ import { format, parseISO, isSameDay } from 'date-fns';
 interface PrintScheduleProps {
     events: any[];
     title: string;
+    categories?: { name: string; color: string }[];
 }
 
-export const PrintSchedule = ({ events, title }: PrintScheduleProps) => {
+export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleProps) => {
     // Sort events by date ascending
     const sortedEvents = [...events].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
+    const getCategoryColor = (catName: string) => {
+        const matched = categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+        return matched?.color || '#D90429';
+    };
+
     return (
-        <div id="print-schedule-section" style={{ fontFamily: 'var(--font)', padding: '20px', color: '#111' }}>
+        <div id="print-schedule-section" style={{ fontFamily: 'var(--font)', color: '#111' }}>
             {/* Branded Header */}
-            <div style={{ display: 'flex', alignItems: 'center', borderBottom: '3px solid var(--red)', paddingBottom: '20px', marginBottom: '24px', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', borderBottom: '3px solid var(--bcss-red)', paddingBottom: '20px', marginBottom: '24px', gap: '20px', pageBreakInside: 'avoid', breakInside: 'avoid', pageBreakAfter: 'avoid', breakAfter: 'avoid' }}>
                 <img 
                     src="/cropped-wildcat-logo.png" 
                     alt="Wildcats Logo" 
                     style={{ width: '80px', height: '80px', objectFit: 'contain' }} 
                 />
                 <div>
-                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-display)', margin: 0, textTransform: 'uppercase', letterSpacing: '-0.02em', color: 'var(--black)' }}>
+                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-display)', margin: 0, textTransform: 'uppercase', letterSpacing: '-0.02em', color: '#0F172A' }}>
                         Burnaby Central Secondary School
                     </h1>
-                    <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--red)', margin: '4px 0 0', fontFamily: 'var(--font-display)' }}>
+                    <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--bcss-red)', margin: '4px 0 0', fontFamily: 'var(--font-display)' }}>
                         Wildcat Club & Event Schedule — {title}
                     </h2>
                 </div>
             </div>
 
             {/* Event Count / Meta Info */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#555', marginBottom: '16px', fontWeight: 500 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#555', marginBottom: '16px', fontWeight: 500, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                 <span>Report Generated: {new Date().toLocaleDateString(undefined, { dateStyle: 'full' })}</span>
                 <span>Total Scheduled Events: {events.length}</span>
             </div>
@@ -44,11 +50,11 @@ export const PrintSchedule = ({ events, title }: PrintScheduleProps) => {
             ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                     <thead>
-                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
+                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444' }}>Date & Time</th>
-                            <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444', width: '20%' }}>Event Title</th>
-                            <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444' }}>Club</th>
-                            <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444' }}>Category</th>
+                            <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444', width: '22%' }}>Event Title</th>
+                            <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444' }}>Club / Host</th>
+                            <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444' }}>Category / Tags</th>
                             <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444', width: '35%' }}>Description</th>
                         </tr>
                     </thead>
@@ -70,8 +76,12 @@ export const PrintSchedule = ({ events, title }: PrintScheduleProps) => {
                                 timeDisplay = `${startTimeStr}${endTimeStr}`;
                             }
 
+                            const catName = event.club?.category 
+                                || (event.tags && event.tags.length > 0 ? event.tags[0] : 'School Event');
+                            const catColor = getCategoryColor(catName);
+
                             return (
-                                <tr key={event.id} style={{ borderBottom: '1px solid #eee', background: idx % 2 === 0 ? '#fafafa' : '#fff' }}>
+                                <tr key={event.id} style={{ borderBottom: '1px solid #eee', background: idx % 2 === 0 ? '#fafafa' : '#fff', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                                     <td style={{ padding: '12px 10px', fontWeight: 600, verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                                         <div>{dateDisplay}</div>
                                         <div style={{ fontSize: '0.75rem', color: '#666', fontWeight: 500, marginTop: '2px' }}>{timeDisplay}</div>
@@ -79,21 +89,23 @@ export const PrintSchedule = ({ events, title }: PrintScheduleProps) => {
                                     <td style={{ padding: '12px 10px', fontWeight: 700, verticalAlign: 'top', color: '#000', fontSize: '0.9rem' }}>
                                         {event.title}
                                     </td>
-                                    <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#333', fontWeight: 500 }}>
-                                        {event.club?.name || 'School Event'}
+                                    <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#333', fontWeight: 600 }}>
+                                        {event.club?.name || 'Burnaby Central'}
                                     </td>
                                     <td style={{ padding: '12px 10px', verticalAlign: 'top' }}>
                                         <span style={{ 
                                             display: 'inline-block',
-                                            padding: '2px 8px', 
-                                            borderRadius: '4px', 
+                                            padding: '4px 12px', 
+                                            borderRadius: '999px', 
                                             fontSize: '0.72rem', 
-                                            fontWeight: 700,
-                                            border: '1px solid #ccc',
-                                            background: '#f0f0f0',
-                                            color: '#333'
+                                            fontWeight: 800,
+                                            background: catColor,
+                                            color: '#FFFFFF',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.03em'
                                         }}>
-                                            {event.club?.category || 'General'}
+                                            {catName}
                                         </span>
                                     </td>
                                     <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#555', lineHeight: 1.4, fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>
@@ -107,7 +119,7 @@ export const PrintSchedule = ({ events, title }: PrintScheduleProps) => {
             )}
 
             {/* Branded Footer */}
-            <div style={{ marginTop: '40px', borderTop: '1px solid #ddd', paddingTop: '16px', textAlign: 'center', fontSize: '0.78rem', color: '#777', fontWeight: 500 }}>
+            <div style={{ marginTop: '40px', borderTop: '1px solid #ddd', paddingTop: '16px', textAlign: 'center', fontSize: '0.78rem', color: '#777', fontWeight: 500, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                 Burnaby Central Secondary School Club Calendar • Keep track of your student life!
             </div>
         </div>

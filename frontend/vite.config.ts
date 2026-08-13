@@ -13,6 +13,7 @@ export default defineConfig({
         enabled: true
       },
       workbox: {
+        cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
         navigateFallbackAllowlist: [/^(?!\/(api|_)).*$/],
         skipWaiting: true,
@@ -33,6 +34,7 @@ export default defineConfig({
             urlPattern: ({ url }) => {
               return url.pathname.startsWith('/api/') && 
                      !url.pathname.includes('/auth/') && 
+                     !url.pathname.includes('/sync/stream') && 
                      !url.pathname.includes('/metrics/visit');
             },
             handler: 'NetworkFirst',

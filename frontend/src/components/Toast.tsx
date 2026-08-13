@@ -1,8 +1,10 @@
 import { useState, createContext, useContext, useCallback } from 'react';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Toast {
-    id: number; message: string; type: 'success' | 'error';
+    id: number; 
+    message: string; 
+    type: 'success' | 'error';
 }
 
 interface ToastContextType {
@@ -20,7 +22,7 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
         setToasts(prev => [...prev, { id, message, type }]);
         setTimeout(() => {
             setToasts(prev => prev.filter(t => t.id !== id));
-        }, 3000);
+        }, 3200);
     }, []);
 
     return (
@@ -29,8 +31,8 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
             <div className="toast-container">
                 {toasts.map(t => (
                     <div key={t.id} className={`toast ${t.type === 'error' ? 'toast-error' : 'toast-success'}`}>
-                        {t.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                        {t.message}
+                        {t.type === 'success' ? <CheckCircle2 size={18} className="toast-icon" /> : <AlertCircle size={18} className="toast-icon" />}
+                        <span className="toast-message">{t.message}</span>
                     </div>
                 ))}
             </div>

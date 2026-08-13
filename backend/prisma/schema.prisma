@@ -34,6 +34,7 @@ model Club {
   instagram   String?
   discord     String?
   imageUrl    String?
+  isFeatured  Boolean  @default(false)
   events      Event[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

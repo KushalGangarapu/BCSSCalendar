@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Sidebar } from './components/Sidebar';
+import { Navbar } from './components/Navbar';
 import { ToastProvider } from './components/Toast';
+import { DataProvider } from './context/DataContext';
+import { ScrollToTop } from './components/ScrollToTop';
 import { Dashboard } from './pages/Dashboard';
 import { ClubsDirectory } from './pages/ClubsDirectory';
 import { MasterCalendar } from './pages/MasterCalendar';
@@ -8,14 +10,26 @@ import { AdminPortal } from './pages/AdminPortal';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { EventPage } from './pages/EventPage';
 import { ClubPage } from './pages/ClubPage';
+import { useEffect } from 'react';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
+import { Helmet } from 'react-helmet-async';
+import { prefetchAllCoreData } from './utils/apiCache';
 
 function App() {
+  useEffect(() => {
+    prefetchAllCoreData();
+  }, []);
+
   return (
     <Router>
-      <ToastProvider>
+      <ScrollToTop />
+      <DataProvider>
+        <ToastProvider>
+        <Helmet>
+          <title>BCSS Calendar</title>
+        </Helmet>
         <div className="app-layout">
-          <Sidebar />
+          <Navbar />
           <main className="main">
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -30,6 +44,7 @@ function App() {
           <PwaInstallBanner />
         </div>
       </ToastProvider>
+      </DataProvider>
     </Router>
   );
 }

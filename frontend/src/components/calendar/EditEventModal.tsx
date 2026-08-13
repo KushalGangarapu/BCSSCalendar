@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Edit3, Save } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '../Toast';
+import { invalidateCache } from '../../utils/apiCache';
 
 interface EditEventModalProps {
     event: any;
@@ -21,7 +22,6 @@ export const EditEventModal = ({
     const { toast } = useToast();
     const [submitting, setSubmitting] = useState(false);
 
-    // Form fields
     const [title, setTitle] = useState('');
     const [clubId, setClubId] = useState<string>('');
     const [dateStr, setDateStr] = useState('');
@@ -43,14 +43,12 @@ export const EditEventModal = ({
         setRecurring(event.recurring || '');
         setSelectedTags(event.tags || []);
 
-        // Parse start date & time
         if (event.date) {
             const parsedStart = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
             setDateStr(format(parsedStart, 'yyyy-MM-dd'));
             const hours = parsedStart.getHours();
             const minutes = parsedStart.getMinutes();
 
-            // If time is not midnight 00:00, set timeStr and isAllDay = false
             if (hours !== 0 || minutes !== 0) {
                 setIsAllDay(false);
                 setTimeStr(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
@@ -59,11 +57,21 @@ export const EditEventModal = ({
             }
         }
 
-        // Parse end date & time
         if (event.endDate) {
-            setHasEndDate(true);
+            const parsedStart = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
             const parsedEnd = typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate);
-            setEndDateStr(format(parsedEnd, 'yyyy-MM-dd'));
+            
+            const startDayStr = format(parsedStart, 'yyyy-MM-dd');
+            const endDayStr = format(parsedEnd, 'yyyy-MM-dd');
+
+            if (!event.recurring && startDayStr !== endDayStr) {
+                setHasEndDate(true);
+                setEndDateStr(endDayStr);
+            } else {
+                setHasEndDate(false);
+                setEndDateStr('');
+            }
+
             const endHours = parsedEnd.getHours();
             const endMinutes = parsedEnd.getMinutes();
             if (endHours !== 0 || endMinutes !== 0) {
@@ -71,6 +79,7 @@ export const EditEventModal = ({
             }
         } else {
             setHasEndDate(false);
+            setEndDateStr('');
         }
     }, [event]);
 
@@ -98,7 +107,6 @@ export const EditEventModal = ({
         setSubmitting(true);
 
         try {
-            // Build start Date object with local timezone offset
             const startIso = isAllDay ? `${dateStr}T00:00:00` : `${dateStr}T${timeStr}:00`;
             const startDt = new Date(startIso);
 
@@ -131,6 +139,7 @@ export const EditEventModal = ({
             });
 
             if (res.ok) {
+                invalidateCache();
                 toast('Event updated successfully!', 'success');
                 onSaveSuccess();
                 onClose();
@@ -153,42 +162,37 @@ export const EditEventModal = ({
                 onClick={e => e.stopPropagation()}
                 style={{
                     maxWidth: '560px',
-                    width: '95%',
-                    maxHeight: '90vh',
-                    overflowY: 'auto',
-                    padding: '28px',
-                    borderRadius: 'var(--radius-xl)',
                     position: 'relative',
                 }}
             >
                 <button
                     onClick={onClose}
                     className="btn btn-ghost"
-                    style={{ position: 'absolute', top: '16px', right: '16px', padding: '8px' }}
+                    style={{ position: 'absolute', top: '18px', right: '18px', padding: '8px', color: 'var(--text-muted)' }}
                 >
                     <X size={20} />
                 </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                     <div style={{
-                        width: '36px', height: '36px', borderRadius: '50%',
-                        background: 'rgba(211, 47, 47, 0.1)', color: 'var(--red)',
+                        width: '40px', height: '40px', borderRadius: '50%',
+                        background: 'var(--bcss-red-soft)', color: 'var(--bcss-red)',
+                        border: '1px solid var(--border-strong)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
                         <Edit3 size={18} />
                     </div>
                     <div>
-                        <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', fontWeight: 800, margin: 0 }}>
-                            Edit Event
+                        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
+                            Edit Event Details
                         </h2>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            Modify event details, schedule, or hosting club
+                        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                            Modify event title, schedule, or organizing club
                         </span>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                    {/* Event Title */}
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
                         <label className="label">Event Title *</label>
                         <input
@@ -196,12 +200,11 @@ export const EditEventModal = ({
                             className="input"
                             value={title}
                             onChange={e => setTitle(e.target.value)}
-                            placeholder="e.g. Spring Band Concert"
+                            placeholder="e.g. Spring Music Performance"
                             required
                         />
                     </div>
 
-                    {/* Hosting Club */}
                     <div>
                         <label className="label">Hosting Club / Organization</label>
                         <select
@@ -209,7 +212,7 @@ export const EditEventModal = ({
                             value={clubId}
                             onChange={e => setClubId(e.target.value)}
                         >
-                            <option value="">None (School Event)</option>
+                            <option value="">None (Burnaby Central School Event)</option>
                             {clubs.map(c => (
                                 <option key={c.id} value={c.id}>
                                     {c.name} ({c.category})
@@ -218,7 +221,6 @@ export const EditEventModal = ({
                         </select>
                     </div>
 
-                    {/* Start Date & Time */}
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                             <label className="label" style={{ margin: 0 }}>Start Date & Time *</label>
@@ -252,7 +254,6 @@ export const EditEventModal = ({
                         </div>
                     </div>
 
-                    {/* End Date Checkbox & Inputs */}
                     <div>
                         <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginBottom: '8px', color: 'var(--text-secondary)' }}>
                             <input
@@ -261,7 +262,7 @@ export const EditEventModal = ({
                                 onChange={e => setHasEndDate(e.target.checked)}
                                 style={{ accentColor: 'var(--red)', cursor: 'pointer' }}
                             />
-                            Multi-Day or End Time
+                            Multi-Day or Custom End Time
                         </label>
 
                         {hasEndDate && (
@@ -284,10 +285,9 @@ export const EditEventModal = ({
                         )}
                     </div>
 
-                    {/* Categories / Tags */}
                     <div>
                         <label className="label">Categories & Tags</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {categories.map(cat => {
                                 const selected = selectedTags.includes(cat.name);
                                 return (
@@ -298,11 +298,11 @@ export const EditEventModal = ({
                                         className="pill"
                                         style={{
                                             cursor: 'pointer',
-                                            border: 'none',
-                                            padding: '5px 12px',
-                                            fontSize: '0.72rem',
-                                            background: selected ? cat.color : 'var(--gray-100)',
-                                            color: selected ? '#fff' : 'var(--gray-700)',
+                                            border: selected ? '1px solid transparent' : '1px solid var(--border)',
+                                            padding: '6px 14px',
+                                            fontSize: '0.75rem',
+                                            background: selected ? cat.color : 'rgba(255,255,255,0.05)',
+                                            color: selected ? '#fff' : 'var(--text-secondary)',
                                             transition: 'all 0.15s ease',
                                         }}
                                     >
@@ -313,20 +313,18 @@ export const EditEventModal = ({
                         </div>
                     </div>
 
-                    {/* Description */}
                     <div>
                         <label className="label">Description / Details</label>
                         <textarea
                             className="input"
                             value={description}
                             onChange={e => setDescription(e.target.value)}
-                            placeholder="Add any event guidelines, room numbers, or notes..."
+                            placeholder="Add event information, location details, or requirements..."
                             rows={3}
                         />
                     </div>
 
-                    {/* Submit Actions */}
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                         <button
                             type="button"
                             onClick={onClose}

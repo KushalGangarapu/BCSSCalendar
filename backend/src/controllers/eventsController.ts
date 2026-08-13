@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { addWeeks, addMonths } from 'date-fns';
-import { clearDashboardCache } from '../utils/cache';
+import { clearCache, getCache, setCache } from '../utils/cache';
 
 const VALID_RECURRING = ['weekly', 'biweekly', 'monthly'] as const;
 type Recurring = (typeof VALID_RECURRING)[number];
@@ -22,6 +22,13 @@ const isRecurring = (value: unknown): value is Recurring =>
 export const getEvents = async (req: Request, res: Response) => {
     try {
         const range = typeof req.query.range === 'string' ? req.query.range : 'all';
+        const cacheKey = `events_${range}`;
+        const cached = getCache(cacheKey);
+        if (cached) {
+            res.setHeader('X-Cache', 'HIT');
+            return res.json(cached);
+        }
+
         const now = new Date();
         const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
@@ -34,6 +41,8 @@ export const getEvents = async (req: Request, res: Response) => {
             include: { club: true },
             orderBy: { date: 'asc' },
         });
+        setCache(cacheKey, events);
+        res.setHeader('X-Cache', 'MISS');
         res.json(events);
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -76,15 +85,38 @@ export const createEvent = async (req: Request, res: Response) => {
             return;
         }
 
-        const endDateOffset = baseEndDate ? baseEndDate.getTime() - baseDate.getTime() : null;
         const recurringValue = isRecurring(recurring) ? recurring : null;
 
-        let instances = 1;
-        if (recurringValue === 'weekly') instances = 16;
-        else if (recurringValue === 'biweekly') instances = 8;
-        else if (recurringValue === 'monthly') instances = 4;
+        // Calculate repeatUntil (recurrence end date) vs same-day occurrence duration
+        let repeatUntil: Date | null = null;
+        let occurrenceDurationMs: number | null = null;
 
-        const newEvents = Array.from({ length: instances }, (_, i) => {
+        const { recurrenceEndDate } = req.body ?? {};
+
+        if (recurringValue) {
+            if (recurrenceEndDate) {
+                const parsedUntil = new Date(recurrenceEndDate);
+                if (!isNaN(parsedUntil.getTime())) repeatUntil = parsedUntil;
+            }
+
+            if (baseEndDate) {
+                const diffMs = baseEndDate.getTime() - baseDate.getTime();
+                if (diffMs > 24 * 60 * 60 * 1000 && !repeatUntil) {
+                    // Multi-day end date provided for recurring event -> treat as recurrence end date
+                    repeatUntil = baseEndDate;
+                } else if (diffMs > 0) {
+                    occurrenceDurationMs = diffMs;
+                }
+            }
+        } else if (baseEndDate) {
+            occurrenceDurationMs = Math.max(0, baseEndDate.getTime() - baseDate.getTime());
+        }
+
+        const newEvents = [];
+        let i = 0;
+        const maxInstances = recurringValue === 'weekly' ? 52 : (recurringValue === 'biweekly' ? 26 : (recurringValue === 'monthly' ? 24 : 1));
+
+        while (i < maxInstances) {
             const eventDate = recurringValue === 'weekly'
                 ? addWeeks(baseDate, i)
                 : recurringValue === 'biweekly'
@@ -93,19 +125,31 @@ export const createEvent = async (req: Request, res: Response) => {
                         ? addMonths(baseDate, i)
                         : baseDate;
 
-            return {
+            if (repeatUntil && eventDate > repeatUntil && i > 0) {
+                break;
+            }
+
+            const occurrenceEndDate = occurrenceDurationMs !== null
+                ? new Date(eventDate.getTime() + occurrenceDurationMs)
+                : null;
+
+            newEvents.push({
                 title,
                 date: eventDate,
-                endDate: endDateOffset !== null ? new Date(eventDate.getTime() + endDateOffset) : null,
+                endDate: occurrenceEndDate,
                 description: description ?? null,
                 clubId: clubId || null,
                 recurring: recurringValue,
                 tags: Array.isArray(tags) ? tags : [],
-            };
-        });
+            });
+
+            i++;
+            if (!recurringValue) break;
+            if (!repeatUntil && i >= (recurringValue === 'weekly' ? 16 : (recurringValue === 'biweekly' ? 8 : 4))) break;
+        }
 
         await prisma.event.createMany({ data: newEvents });
-        clearDashboardCache();
+        clearCache();
 
         res.status(201).json({ message: 'Event(s) created successfully', count: newEvents.length });
     } catch (error) {
@@ -137,7 +181,7 @@ export const deleteEvent = async (req: Request, res: Response) => {
         } else {
             await prisma.event.delete({ where: { id: id as string } });
         }
-        clearDashboardCache();
+        clearCache();
         res.json({ message: 'Event deleted successfully' });
     } catch (error) {
         console.error('Error deleting event:', error);
@@ -148,6 +192,13 @@ export const deleteEvent = async (req: Request, res: Response) => {
 export const getEventById = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
+        const cacheKey = `event_${id}`;
+        const cached = getCache(cacheKey);
+        if (cached) {
+            res.setHeader('X-Cache', 'HIT');
+            return res.json(cached);
+        }
+
         const event = await prisma.event.findUnique({
             where: { id: id as string },
             include: { club: true }
@@ -156,6 +207,8 @@ export const getEventById = async (req: Request, res: Response) => {
             res.status(404).json({ error: 'Event not found' });
             return;
         }
+        setCache(cacheKey, event);
+        res.setHeader('X-Cache', 'MISS');
         res.json(event);
     } catch (error) {
         console.error('Error fetching event by id:', error);
@@ -163,10 +216,10 @@ export const getEventById = async (req: Request, res: Response) => {
     }
 };
 
-export const updateEvent = async (req: Request, res: Response) => {
+export const updateEvent = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const { allFuture } = req.query;
-    const { title, date, endDate, description, clubId, recurring, tags } = req.body ?? {};
+    const { title, date, endDate, recurrenceEndDate, description, clubId, recurring, tags } = req.body ?? {};
 
     if (!title || !date) {
         res.status(400).json({ error: 'Missing required fields: title and date' });
@@ -215,31 +268,114 @@ export const updateEvent = async (req: Request, res: Response) => {
                     clubId: originalEvent.clubId,
                     recurring: originalEvent.recurring,
                     date: { gte: originalEvent.date }
-                }
+                },
+                orderBy: { date: 'asc' }
             });
 
-            const duration = newEndDate ? (newEndDate.getTime() - newDate.getTime()) : null;
+            // Parse recurrence cutoff date if provided
+            let repeatUntil: Date | null = null;
+            if (recurrenceEndDate) {
+                const parsedUntil = new Date(recurrenceEndDate);
+                if (!isNaN(parsedUntil.getTime())) repeatUntil = parsedUntil;
+            }
+
+            const duration = newEndDate ? Math.max(0, newEndDate.getTime() - newDate.getTime()) : null;
             const offset = newDate.getTime() - originalEvent.date.getTime();
 
-            await prisma.$transaction(
-                futureEvents.map(ev => {
-                    const shiftedDate = new Date(ev.date.getTime() + offset);
-                    const shiftedEndDate = duration !== null ? new Date(shiftedDate.getTime() + duration) : null;
-
-                    return prisma.event.update({
-                        where: { id: ev.id },
+            // If recurrence was cancelled (changed to one-time)
+            if (!recurringValue) {
+                const toDeleteIds = futureEvents.filter(ev => ev.id !== originalEvent.id).map(ev => ev.id);
+                await prisma.$transaction([
+                    prisma.event.update({
+                        where: { id: originalEvent.id },
                         data: {
                             title,
-                            date: shiftedDate,
-                            endDate: shiftedEndDate,
+                            date: newDate,
+                            endDate: duration !== null ? new Date(newDate.getTime() + duration) : null,
                             description: description ?? null,
-                            clubId,
-                            recurring: recurringValue,
+                            clubId: clubId || null,
+                            recurring: null,
                             tags: Array.isArray(tags) ? tags : [],
                         }
-                    });
-                })
-            );
+                    }),
+                    ...(toDeleteIds.length > 0 ? [prisma.event.deleteMany({ where: { id: { in: toDeleteIds } } })] : [])
+                ]);
+            } else {
+                // Updating recurring series
+                const updates: any[] = [];
+                const toDeleteIds: string[] = [];
+                let latestEventDate = newDate;
+
+                for (const ev of futureEvents) {
+                    const shiftedDate = new Date(ev.date.getTime() + offset);
+                    
+                    // If cutoff date is set and this shifted instance is past the cutoff (and it's not the initial event)
+                    if (repeatUntil && shiftedDate > repeatUntil && ev.id !== originalEvent.id) {
+                        toDeleteIds.push(ev.id);
+                    } else {
+                        const shiftedEndDate = duration !== null ? new Date(shiftedDate.getTime() + duration) : null;
+                        updates.push(
+                            prisma.event.update({
+                                where: { id: ev.id },
+                                data: {
+                                    title,
+                                    date: shiftedDate,
+                                    endDate: shiftedEndDate,
+                                    description: description ?? null,
+                                    clubId: clubId || null,
+                                    recurring: recurringValue,
+                                    tags: Array.isArray(tags) ? tags : [],
+                                }
+                            })
+                        );
+                        if (shiftedDate > latestEventDate) {
+                            latestEventDate = shiftedDate;
+                        }
+                    }
+                }
+
+                // If repeatUntil was extended further than existing series, generate missing occurrences
+                const newCreatedOccurrences = [];
+                if (repeatUntil && repeatUntil > latestEventDate) {
+                    let nextInstanceIndex = 1;
+                    const maxInstances = recurringValue === 'weekly' ? 52 : (recurringValue === 'biweekly' ? 26 : 24);
+                    
+                    while (nextInstanceIndex < maxInstances) {
+                        const candidateDate = recurringValue === 'weekly'
+                            ? addWeeks(newDate, nextInstanceIndex)
+                            : recurringValue === 'biweekly'
+                                ? addWeeks(newDate, nextInstanceIndex * 2)
+                                : addMonths(newDate, nextInstanceIndex);
+
+                        if (candidateDate > repeatUntil) {
+                            break;
+                        }
+
+                        if (candidateDate > latestEventDate) {
+                            newCreatedOccurrences.push({
+                                title,
+                                date: candidateDate,
+                                endDate: duration !== null ? new Date(candidateDate.getTime() + duration) : null,
+                                description: description ?? null,
+                                clubId: clubId || null,
+                                recurring: recurringValue,
+                                tags: Array.isArray(tags) ? tags : [],
+                            });
+                        }
+                        nextInstanceIndex++;
+                    }
+                }
+
+                const transactionOps: any[] = [...updates];
+                if (toDeleteIds.length > 0) {
+                    transactionOps.push(prisma.event.deleteMany({ where: { id: { in: toDeleteIds } } }));
+                }
+                if (newCreatedOccurrences.length > 0) {
+                    transactionOps.push(prisma.event.createMany({ data: newCreatedOccurrences }));
+                }
+
+                await prisma.$transaction(transactionOps);
+            }
         } else {
             // If it was part of a recurring series and we only edit this instance,
             // set recurring to null to decouple it from future cascading edits/deletions.
@@ -252,14 +388,14 @@ export const updateEvent = async (req: Request, res: Response) => {
                     date: newDate,
                     endDate: newEndDate,
                     description: description ?? null,
-                    clubId,
+                    clubId: clubId || null,
                     recurring: updatedRecurring,
                     tags: Array.isArray(tags) ? tags : [],
                 }
             });
         }
 
-        clearDashboardCache();
+        clearCache();
         res.json({ message: 'Event updated successfully' });
     } catch (error) {
         console.error('Error updating event:', error);

@@ -31,29 +31,32 @@ export const MobileFilterDropdown = ({ options, onToggle, label = 'Filters' }: M
         };
     }, []);
 
-    // Don't count "All" as an active filter
     const activeCount = options.filter(o => o.selected && o.name !== 'All').length;
 
     return (
         <div ref={containerRef} style={{ position: 'relative' }}>
             <button
                 onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-                className="btn"
+                className="btn btn-outline"
                 style={{
-                    height: '40px', padding: '0 14px', gap: '6px', fontSize: '0.82rem',
-                    borderColor: activeCount > 0 ? 'var(--red)' : 'var(--border)',
-                    borderStyle: 'solid', borderWidth: '2px',
-                    backgroundColor: 'transparent',
-                    color: activeCount > 0 ? 'var(--red)' : 'var(--text)',
-                    fontWeight: 600,
+                    height: '42px', 
+                    padding: '0 16px', 
+                    gap: '8px', 
+                    fontSize: '0.86rem',
+                    borderColor: activeCount > 0 ? 'var(--bcss-red)' : 'var(--border-strong)',
+                    backgroundColor: activeCount > 0 ? 'var(--bcss-red-soft)' : '#FFFFFF',
+                    color: activeCount > 0 ? 'var(--bcss-red)' : 'var(--text-main)',
+                    fontWeight: 700,
+                    borderRadius: 'var(--radius-pill)',
+                    boxShadow: 'var(--shadow-sm)',
                 }}
             >
-                <Filter size={15} />
+                <Filter size={16} />
                 {label}
                 {activeCount > 0 && (
                     <span style={{
-                        background: 'var(--red)', color: '#fff', borderRadius: '50%',
-                        width: '18px', height: '18px', fontSize: '0.65rem', fontWeight: 800,
+                        background: 'var(--bcss-red)', color: '#fff', borderRadius: '50%',
+                        width: '20px', height: '20px', fontSize: '0.7rem', fontWeight: 900,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>{activeCount}</span>
                 )}
@@ -65,8 +68,12 @@ export const MobileFilterDropdown = ({ options, onToggle, label = 'Filters' }: M
                     position: 'absolute', top: 'calc(100% + 8px)', 
                     left: 0, 
                     zIndex: 999,
-                    background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
-                    boxShadow: 'var(--shadow-lg)', minWidth: '200px', padding: '8px 0',
+                    background: '#FFFFFF', 
+                    border: '1px solid var(--border-strong)', 
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: 'var(--shadow-lg)', 
+                    minWidth: '240px', 
+                    padding: '8px 0',
                     animation: 'fadeUp 0.15s ease both',
                 }}>
                     {options.map(opt => (
@@ -78,19 +85,19 @@ export const MobileFilterDropdown = ({ options, onToggle, label = 'Filters' }: M
                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(opt.name); } }}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '10px',
-                                padding: '10px 16px', cursor: 'pointer', fontSize: '0.88rem',
-                                fontWeight: 600, fontFamily: 'var(--font-display)',
-                                color: opt.selected ? 'var(--text)' : 'var(--text-secondary)',
-                                background: opt.selected ? 'var(--gray-50)' : 'transparent',
-                                transition: 'background 0.15s',
+                                padding: '12px 18px', cursor: 'pointer', fontSize: '0.88rem',
+                                fontWeight: 700, fontFamily: 'var(--font-display)',
+                                color: opt.selected ? 'var(--bcss-red)' : 'var(--text-main)',
+                                background: opt.selected ? 'var(--bcss-red-soft)' : 'transparent',
+                                transition: 'background 0.15s ease',
                                 userSelect: 'none',
                                 WebkitTapHighlightColor: 'transparent',
                             }}
                         >
                             <span style={{
                                 width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0,
-                                border: opt.selected ? 'none' : '2px solid var(--gray-300)',
-                                background: opt.selected ? (opt.color || 'var(--red)') : 'transparent',
+                                border: opt.selected ? 'none' : '2px solid var(--border-strong)',
+                                background: opt.selected ? (opt.color || 'var(--bcss-red)') : 'transparent',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 transition: 'all 0.15s',
                             }}>
@@ -101,7 +108,7 @@ export const MobileFilterDropdown = ({ options, onToggle, label = 'Filters' }: M
                                 )}
                             </span>
                             {opt.color && (
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: opt.color, flexShrink: 0 }} />
+                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: opt.color, flexShrink: 0 }} />
                             )}
                             {opt.name}
                         </div>
