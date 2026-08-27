@@ -93,9 +93,9 @@ export const MonthView = ({
                                         lineHeight: 1.3
                                     }}>
                                         {ev.title}
-                                        {ev.endDate && !isSameDay(parseISO(ev.date), parseISO(ev.endDate)) && (
+                                        {ev.endDate && !isSameDay(typeof ev.date === 'string' ? parseISO(ev.date) : ev.date, typeof ev.endDate === 'string' ? parseISO(ev.endDate) : ev.endDate) && (
                                             <span style={{ opacity: 0.88, fontWeight: 600, marginLeft: '4px', fontSize: '0.9em' }}>
-                                                ({format(parseISO(ev.date), 'MMM d')} – {format(parseISO(ev.endDate), 'MMM d')})
+                                                ({format(typeof ev.date === 'string' ? parseISO(ev.date) : ev.date, 'MMM d')} – {format(typeof ev.endDate === 'string' ? parseISO(ev.endDate) : ev.endDate, 'MMM d')})
                                             </span>
                                         )}
                                     </span>

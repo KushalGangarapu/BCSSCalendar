@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Eye, Calendar, Users, ArrowRight, Heart, Sparkles, Trophy, Zap, Clock } from 'lucide-react';
+import { Eye, Calendar, Users, ArrowRight, Heart, Star, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { isEventLive } from '../utils/timeUtils';
+import { isEventLive, isAllDayEvent } from '../utils/timeUtils';
 import { SkeletonClubCard, SkeletonEventItem } from '../components/Skeleton';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -18,12 +18,6 @@ export const Dashboard = () => {
     const isMobile = useIsMobile();
 
     useEffect(() => {
-        const visitKey = 'bcss_has_visited_v2';
-        if (!localStorage.getItem(visitKey)) {
-            localStorage.setItem(visitKey, 'true');
-            fetch(`${import.meta.env.VITE_API_URL}/api/metrics/visit`, { method: 'POST' }).catch(console.error);
-        }
-
         const followed = JSON.parse(localStorage.getItem('bcss_followed_clubs') || '[]');
         setFollowedClubIds(followed);
     }, []);
@@ -87,10 +81,6 @@ export const Dashboard = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: nextLiveEvent && !isMobile ? '1.3fr 1fr' : '1fr', gap: '32px', alignItems: 'center' }}>
                     {/* Left Column */}
                     <div>
-                        <div className="pill pill-red" style={{ gap: '6px', fontSize: '0.78rem', marginBottom: '16px' }}>
-                            <Sparkles size={14} /> BCSS Wildcat Calendar
-                        </div>
-
                         <h1 style={{
                             fontSize: 'clamp(1.8rem, 4vw, 3.1rem)',
                             fontWeight: 900,
@@ -101,7 +91,7 @@ export const Dashboard = () => {
                             letterSpacing: '-0.03em'
                         }}>
                             Welcome to <br />
-                            <span style={{ color: 'var(--bcss-red)' }}>the Wildcat Calendar</span>
+                            the <span style={{ color: 'var(--bcss-red)' }}>Wildcat Calendar</span>
                         </h1>
 
                         <p style={{
@@ -140,7 +130,7 @@ export const Dashboard = () => {
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                 <span className="pill pill-red" style={{ fontSize: '0.72rem' }}>
-                                    <Zap size={13} style={{ marginRight: '4px' }} /> Next Scheduled Event
+                                    Next Scheduled Event
                                 </span>
                                 {isEventLive(nextLiveEvent.date, nextLiveEvent.endDate) && (
                                     <span style={{ fontSize: '0.68rem', background: 'var(--bcss-red)', color: '#FFF', padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontWeight: 900 }}>
@@ -155,7 +145,10 @@ export const Dashboard = () => {
 
                             <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                                 <Clock size={16} style={{ color: 'var(--bcss-red)' }} />
-                                {new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at {new Date(nextLiveEvent.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {isAllDayEvent(nextLiveEvent.date, nextLiveEvent.endDate)
+                                    ? `${new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · All Day`
+                                    : `${new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at ${new Date(nextLiveEvent.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                }
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
@@ -211,7 +204,7 @@ export const Dashboard = () => {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                         <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}>
-                            <Trophy size={22} style={{ color: 'var(--bcss-red)' }} />
+                            <Star size={22} fill="currentColor" style={{ color: 'var(--bcss-red)' }} />
                             Featured Student Clubs
                         </h2>
                     </div>
@@ -288,7 +281,7 @@ export const Dashboard = () => {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                         <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}>
-                            <Sparkles size={22} style={{ color: 'var(--bcss-red)' }} />
+                            <Calendar size={22} style={{ color: 'var(--bcss-red)' }} />
                             Upcoming Events
                         </h2>
                         <button

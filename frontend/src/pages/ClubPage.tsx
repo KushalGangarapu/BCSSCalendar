@@ -7,6 +7,7 @@ import { SkeletonClubDetail } from '../components/Skeleton';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
+import { isAllDayEvent } from '../utils/timeUtils';
 
 export const ClubPage = () => {
     const params = useParams();
@@ -255,7 +256,10 @@ export const ClubPage = () => {
                                             <div>
                                                 <div style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '4px', color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>{ev.title}</div>
                                                 <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-                                                    {format(parseISO(ev.date), 'EEEE, MMM do • h:mm a')}{ev.endDate ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ''}
+                                                    {isAllDayEvent(ev.date, ev.endDate) 
+                                                        ? `${format(parseISO(ev.date), 'EEEE, MMM do')} • All Day` 
+                                                        : `${format(parseISO(ev.date), 'EEEE, MMM do • h:mm a')}${ev.endDate ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ''}`
+                                                    }
                                                 </div>
                                             </div>
                                             <div style={{ color: 'var(--bcss-red)', fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>

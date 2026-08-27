@@ -3,6 +3,8 @@ import { format, parseISO, isSameDay } from 'date-fns';
 import { X, Clock, ExternalLink, Calendar, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../../utils/calendarExport';
+import { useAppData } from '../../context/DataContext';
+import { isAllDayEvent } from '../../utils/timeUtils';
 
 interface EventDetailModalProps {
     event: any;
@@ -15,9 +17,22 @@ interface EventDetailModalProps {
 
 export const EventDetailModal = ({ event, onClose, categories = [], categoryColor, isAdmin, onEditEvent }: EventDetailModalProps) => {
     const navigate = useNavigate();
+    const { events: allEvents } = useAppData();
     const [showExportDropdown, setShowExportDropdown] = useState(false);
 
     if (!event) return null;
+
+    const startDt = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
+    const endDt = event.endDate ? (typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate)) : null;
+
+    const recurrenceEndDate = event.recurrenceEndDate || (() => {
+        if (!event.recurring || !Array.isArray(allEvents)) return null;
+        const series = allEvents
+            .filter(e => e.title?.trim().toLowerCase() === event.title?.trim().toLowerCase() && (e.clubId || null) === (event.clubId || null) && e.recurring)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const lastInSeries = series[series.length - 1];
+        return lastInSeries ? (lastInSeries.endDate || lastInSeries.date) : null;
+    })();
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -103,8 +118,16 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.95rem', fontWeight: 600 }}>
                         <Clock size={16} style={{ color: categoryColor || 'var(--bcss-red)' }} />
-                        {format(parseISO(event.date), 'EEEE, MMMM do, yyyy \u00B7 h:mm a')}
-                        {event.endDate && (isSameDay(parseISO(event.date), parseISO(event.endDate)) ? ` \u2013 ${format(parseISO(event.endDate), 'h:mm a')}` : ` \u2013 ${format(parseISO(event.endDate), 'EEEE, MMMM do \u00B7 h:mm a')}`)}
+                        {isAllDayEvent(event.date, event.endDate) ? (
+                            endDt && !isSameDay(startDt, endDt)
+                                ? `${format(startDt, 'EEEE, MMMM do, yyyy')} – ${format(endDt, 'EEEE, MMMM do, yyyy')} · All Day`
+                                : `${format(startDt, 'EEEE, MMMM do, yyyy')} · All Day`
+                        ) : (
+                            <>
+                                {format(startDt, 'EEEE, MMMM do, yyyy · h:mm a')}
+                                {endDt && (isSameDay(startDt, endDt) ? ` – ${format(endDt, 'h:mm a')}` : ` – ${format(endDt, 'EEEE, MMMM do · h:mm a')}`)}
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -207,7 +230,7 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                             overflow: 'hidden',
                         }}>
                             <a 
-                                href={generateGoogleCalendarUrl(event)} 
+                                href={generateGoogleCalendarUrl(event, recurrenceEndDate)} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 onClick={() => setShowExportDropdown(false)}

@@ -304,12 +304,7 @@ cd BCSS-Calendar
    ```
    > Default developer administrator credentials seeded are `admin` / `adminpassword123`.
 
-6. Categorize clubs:
-   ```bash
-   npx ts-node categorizeClubs.ts
-   ```
-
-7. Start the backend development server:
+6. Start the backend development server:
    ```bash
    npm run dev
    ```

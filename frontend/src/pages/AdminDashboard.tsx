@@ -94,7 +94,15 @@ export const AdminDashboard = () => {
         setSubmitting(true);
         try {
             const dt = hasTime ? new Date(`${date}T${time}:00`) : new Date(`${date}T00:00:00`);
-            const endDt = hasEndDate && endDate ? (hasEndTime ? new Date(`${endDate}T${endTime}:00`) : new Date(`${endDate}T23:59:00`)) : (hasEndTime && time && endTime ? new Date(`${date}T${endTime}:00`) : null);
+            let endDt: Date | null = null;
+            if (hasEndDate) {
+                const targetEndDate = endDate || date;
+                if (hasEndTime && endTime) {
+                    endDt = new Date(`${targetEndDate}T${endTime}:00`);
+                } else {
+                    endDt = new Date(`${targetEndDate}T23:59:59`);
+                }
+            }
 
             let url = `${import.meta.env.VITE_API_URL}/api/events`;
             let method = 'POST';
@@ -302,8 +310,11 @@ export const AdminDashboard = () => {
                 setEndTime(`${String(eHours).padStart(2, '0')}:${String(eMinutes).padStart(2, '0')}`);
             }
 
-            // Only mark multi-day if it is NOT a recurring series and spans across different calendar days
-            if (!event.recurring && endDateString !== startDateString) {
+            // Only mark multi-day or custom end time if it spans across different days or has a non-midnight/non-eod end time
+            if (!event.recurring && (endDateString !== startDateString || (eHours !== 0 && (eHours !== 23 || eMinutes !== 59)))) {
+                setEndDate(endDateString);
+                setHasEndDate(true);
+            } else if (event.recurring && (eHours !== 0 && (eHours !== 23 || eMinutes !== 59))) {
                 setEndDate(endDateString);
                 setHasEndDate(true);
             } else {
@@ -503,6 +514,7 @@ export const AdminDashboard = () => {
                                 <select className="input" value={recurring} onChange={e => setRecurring(e.target.value)}>
                                     <option value="">None (One-time)</option>
                                     <option value="weekly">Weekly</option>
+                                    <option value="biweekly">Bi-weekly (Every 2 weeks)</option>
                                     <option value="monthly">Monthly</option>
                                 </select>
                             </div>

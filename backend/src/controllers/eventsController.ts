@@ -108,6 +108,12 @@ export const createEvent = async (req: Request, res: Response) => {
                     occurrenceDurationMs = diffMs;
                 }
             }
+
+            // Default to the end of the current academic school year (June 30th) if no repeatUntil is set
+            if (!repeatUntil) {
+                const endYear = baseDate.getMonth() >= 6 ? baseDate.getFullYear() + 1 : baseDate.getFullYear();
+                repeatUntil = new Date(endYear, 5, 30, 23, 59, 59, 999);
+            }
         } else if (baseEndDate) {
             occurrenceDurationMs = Math.max(0, baseEndDate.getTime() - baseDate.getTime());
         }
@@ -145,7 +151,6 @@ export const createEvent = async (req: Request, res: Response) => {
 
             i++;
             if (!recurringValue) break;
-            if (!repeatUntil && i >= (recurringValue === 'weekly' ? 16 : (recurringValue === 'biweekly' ? 8 : 4))) break;
         }
 
         await prisma.event.createMany({ data: newEvents });
@@ -207,9 +212,31 @@ export const getEventById = async (req: Request, res: Response) => {
             res.status(404).json({ error: 'Event not found' });
             return;
         }
-        setCache(cacheKey, event);
+
+        let recurrenceEndDate: Date | null = null;
+        if (event.recurring) {
+            const lastEvent = await prisma.event.findFirst({
+                where: {
+                    title: event.title,
+                    clubId: event.clubId,
+                    recurring: event.recurring,
+                    date: { gte: event.date }
+                },
+                orderBy: { date: 'desc' }
+            });
+            if (lastEvent) {
+                recurrenceEndDate = lastEvent.endDate || lastEvent.date;
+            }
+        }
+
+        const eventData = {
+            ...event,
+            recurrenceEndDate
+        };
+
+        setCache(cacheKey, eventData);
         res.setHeader('X-Cache', 'MISS');
-        res.json(event);
+        res.json(eventData);
     } catch (error) {
         console.error('Error fetching event by id:', error);
         res.status(500).json({ error: 'Failed to fetch event details' });
@@ -437,7 +464,7 @@ export const getEventIcs = async (req: Request, res: Response): Promise<void> =>
         const cleanTitle = event.title.replace(/[,;]/g, '\\$&');
         const cleanDesc = (event.description || '').replace(/\n/g, '\\n').replace(/[,;]/g, '\\$&') + `\\n\\nHosted by: ${event.club?.name || 'School Event'}`;
 
-        const icsContent = [
+        const icsLines = [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
             'PRODID:-//BCSS Calendar//Event//EN',
@@ -445,12 +472,48 @@ export const getEventIcs = async (req: Request, res: Response): Promise<void> =>
             `UID:${event.id}`,
             `DTSTAMP:${stamp}`,
             `DTSTART:${start}`,
-            `DTEND:${end}`,
+            `DTEND:${end}`
+        ];
+
+        if (event.recurring) {
+            const lastEvent = await prisma.event.findFirst({
+                where: {
+                    title: event.title,
+                    clubId: event.clubId,
+                    recurring: event.recurring,
+                    date: { gte: event.date }
+                },
+                orderBy: { date: 'desc' }
+            });
+
+            let freq = 'WEEKLY';
+            let interval = '';
+            if (event.recurring === 'weekly') {
+                freq = 'WEEKLY';
+            } else if (event.recurring === 'biweekly') {
+                freq = 'WEEKLY';
+                interval = ';INTERVAL=2';
+            } else if (event.recurring === 'monthly') {
+                freq = 'MONTHLY';
+            }
+
+            let untilStr = '';
+            if (lastEvent) {
+                const untilDate = lastEvent.endDate || getFallbackEndDate(lastEvent.date);
+                untilStr = `;UNTIL=${formatToUtcBasic(untilDate)}`;
+            }
+
+            icsLines.push(`RRULE:FREQ=${freq}${interval}${untilStr}`);
+        }
+
+        icsLines.push(
             `SUMMARY:${cleanTitle}`,
             `DESCRIPTION:${cleanDesc}`,
             'END:VEVENT',
             'END:VCALENDAR'
-        ].join('\r\n');
+        );
+
+        const icsContent = icsLines.join('\r\n');
 
         res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
         res.setHeader('Content-Disposition', `inline; filename="${event.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics"`);

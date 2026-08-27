@@ -1,6 +1,6 @@
-import { format, isSameDay, parseISO } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { Trash2, Clock } from 'lucide-react';
-import { isEventOnDay } from '../../utils/timeUtils';
+import { isEventOnDay, formatEventTime } from '../../utils/timeUtils';
 
 export const DayView = ({
     month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
@@ -65,7 +65,7 @@ export const DayView = ({
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.86rem', color: 'var(--text-secondary)' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                 <Clock size={14} style={{ color: 'var(--bcss-red)' }} />
-                                                {format(parseISO(ev.date), 'h:mm a')}{ev.endDate ? (isSameDay(parseISO(ev.date), parseISO(ev.endDate)) ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ` – ${format(parseISO(ev.endDate), 'MMM d, h:mm a')}`) : ''}
+                                                {formatEventTime(ev.date, ev.endDate)}
                                             </div>
                                             <span>&bull;</span>
                                             <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{ev.club?.name || 'Burnaby Central'}</span>

@@ -1,6 +1,6 @@
 import { format, isSameDay, startOfWeek, endOfWeek, addDays, parseISO } from 'date-fns';
 import { Trash2, Clock } from 'lucide-react';
-import { isEventOnDay } from '../../utils/timeUtils';
+import { isEventOnDay, formatEventTime } from '../../utils/timeUtils';
 
 export const WeekView = ({
     month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle, isMobile
@@ -77,9 +77,9 @@ export const WeekView = ({
                                                     display: 'block', minWidth: 0, flex: 1, color: '#FFFFFF'
                                                 }}>
                                                     {ev.title}
-                                                    {ev.endDate && !isSameDay(parseISO(ev.date), parseISO(ev.endDate)) && (
+                                                    {ev.endDate && !isSameDay(typeof ev.date === 'string' ? parseISO(ev.date) : ev.date, typeof ev.endDate === 'string' ? parseISO(ev.endDate) : ev.endDate) && (
                                                         <span style={{ opacity: 0.9, fontWeight: 600, marginLeft: '4px', fontSize: '0.85em' }}>
-                                                            ({format(parseISO(ev.date), 'MMM d')} – {format(parseISO(ev.endDate), 'MMM d')})
+                                                            ({format(typeof ev.date === 'string' ? parseISO(ev.date) : ev.date, 'MMM d')} – {format(typeof ev.endDate === 'string' ? parseISO(ev.endDate) : ev.endDate, 'MMM d')})
                                                         </span>
                                                     )}
                                                 </span>
@@ -87,7 +87,7 @@ export const WeekView = ({
                                             {!isMobile && (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', opacity: 0.95, whiteSpace: 'nowrap', color: '#FFFFFF' }}>
                                                     <Clock size={12} />
-                                                    {format(parseISO(ev.date), 'h:mm a')}{ev.endDate ? (isSameDay(parseISO(ev.date), parseISO(ev.endDate)) ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ` – ${format(parseISO(ev.endDate), 'MMM d, h:mm a')}`) : ''}
+                                                    {formatEventTime(ev.date, ev.endDate)}
                                                 </div>
                                             )}
 

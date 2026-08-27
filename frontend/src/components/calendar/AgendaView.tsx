@@ -1,5 +1,6 @@
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
 import { Trash2, Clock, Calendar } from 'lucide-react';
+import { formatEventTime } from '../../utils/timeUtils';
 
 export const AgendaView = ({
     events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
@@ -12,17 +13,19 @@ export const AgendaView = ({
     const todayStr = format(today, 'yyyy-MM-dd');
 
     sortedEvents.forEach((ev: any) => {
-        const start = parseISO(ev.date);
+        const start = typeof ev.date === 'string' ? parseISO(ev.date) : new Date(ev.date);
         const dStr = format(start, 'yyyy-MM-dd');
         if (!grouped[dStr]) grouped[dStr] = [];
         grouped[dStr].push(ev);
 
-        if (ev.endDate && !isSameDay(start, parseISO(ev.endDate))) {
-            const end = parseISO(ev.endDate);
-            if (dStr !== todayStr && startOfDay(today) >= startOfDay(start) && startOfDay(today) <= startOfDay(end)) {
-                if (!grouped[todayStr]) grouped[todayStr] = [];
-                if (!grouped[todayStr].some((e: any) => e.id === ev.id)) {
-                    grouped[todayStr].push(ev);
+        if (ev.endDate) {
+            const end = typeof ev.endDate === 'string' ? parseISO(ev.endDate) : new Date(ev.endDate);
+            if (!isSameDay(start, end)) {
+                if (dStr !== todayStr && startOfDay(today) >= startOfDay(start) && startOfDay(today) <= startOfDay(end)) {
+                    if (!grouped[todayStr]) grouped[todayStr] = [];
+                    if (!grouped[todayStr].some((e: any) => e.id === ev.id)) {
+                        grouped[todayStr].push(ev);
+                    }
                 }
             }
         }
@@ -112,7 +115,7 @@ export const AgendaView = ({
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                                 <Clock size={13} style={{ color: 'var(--bcss-red)' }} />
-                                                                {format(parseISO(ev.date), 'h:mm a')}{ev.endDate ? (isSameDay(parseISO(ev.date), parseISO(ev.endDate)) ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ` – ${format(parseISO(ev.endDate), 'MMM d, h:mm a')}`) : ''}
+                                                                {formatEventTime(ev.date, ev.endDate)}
                                                             </div>
                                                             <span>&bull;</span>
                                                             <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{ev.club?.name || 'Burnaby Central'}</span>

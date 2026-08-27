@@ -1761,17 +1761,6 @@ async function main() {
         });
     }
 
-    // 5. Initialize metrics
-    const metrics = await prisma.metrics.findFirst();
-    if (!metrics) {
-        await prisma.metrics.create({
-            data: {
-                activeUsers: 276,
-                portalSignups: 0,
-            },
-        });
-    }
-
     console.log('Database seeded successfully with all categories, clubs, events, and admin user!');
 }
 

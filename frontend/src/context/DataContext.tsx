@@ -217,6 +217,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     useEffect(() => {
+        // 0. Track unique visitor globally across any entry page
+        const visitKey = 'bcss_has_visited_v2';
+        if (typeof window !== 'undefined' && !localStorage.getItem(visitKey)) {
+            localStorage.setItem(visitKey, 'true');
+            if (apiUrl) {
+                fetch(`${apiUrl}/api/metrics/visit`, { method: 'POST' }).catch(console.error);
+            }
+        }
+
         // 1. Initial immediate background sync (1 fast call)
         syncResource('all');
 

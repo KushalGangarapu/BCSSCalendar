@@ -1,4 +1,5 @@
 import { format, parseISO, isSameDay } from 'date-fns';
+import { formatEventTime, isAllDayEvent } from '../../utils/timeUtils';
 
 interface PrintScheduleProps {
     events: any[];
@@ -13,8 +14,10 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
     );
 
     const getCategoryColor = (catName: string) => {
-        const matched = categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
-        return matched?.color || '#D90429';
+        const matched = categories.find(c => c.name.toLowerCase().trim() === catName.toLowerCase().trim());
+        if (matched) return matched.color;
+        if (catName.toLowerCase().trim() === 'school event') return '#0F172A';
+        return '#D90429';
     };
 
     return (
@@ -50,7 +53,7 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
             ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                     <thead>
-                        <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444' }}>Date & Time</th>
                             <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444', width: '22%' }}>Event Title</th>
                             <th style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', color: '#444' }}>Club / Host</th>
@@ -60,56 +63,83 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
                     </thead>
                     <tbody>
                         {sortedEvents.map((event, idx) => {
-                            const startDate = parseISO(event.date);
-                            const endDate = event.endDate ? parseISO(event.endDate) : null;
+                            const startDate = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
+                            const endDate = event.endDate ? (typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate)) : null;
 
                             let dateDisplay = '';
                             let timeDisplay = '';
 
                             if (endDate && !isSameDay(startDate, endDate)) {
                                 dateDisplay = `${format(startDate, 'EEE, MMM d')} – ${format(endDate, 'EEE, MMM d')}`;
-                                timeDisplay = 'Multi-day';
+                                timeDisplay = isAllDayEvent(startDate, endDate) ? 'All Day' : formatEventTime(startDate, endDate);
                             } else {
                                 dateDisplay = format(startDate, 'EEE, MMM d');
-                                const startTimeStr = format(startDate, 'h:mm a');
-                                const endTimeStr = endDate ? ` - ${format(endDate, 'h:mm a')}` : '';
-                                timeDisplay = `${startTimeStr}${endTimeStr}`;
+                                timeDisplay = formatEventTime(startDate, endDate);
                             }
 
-                            const catName = event.club?.category 
-                                || (event.tags && event.tags.length > 0 ? event.tags[0] : 'School Event');
-                            const catColor = getCategoryColor(catName);
+                            // Collect all distinct tags and category
+                            const tagsToRender: string[] = [];
+                            if (event.club?.category && event.club.category !== 'School Event') {
+                                tagsToRender.push(event.club.category);
+                            }
+                            if (event.tags && event.tags.length > 0) {
+                                event.tags.forEach((t: string) => {
+                                    if (!tagsToRender.includes(t)) {
+                                        tagsToRender.push(t);
+                                    }
+                                });
+                            }
+                            if (tagsToRender.length === 0) {
+                                tagsToRender.push('School Event');
+                            }
+
+                            const primaryCatColor = getCategoryColor(tagsToRender[0]);
 
                             return (
-                                <tr key={event.id} style={{ borderBottom: '1px solid #eee', background: idx % 2 === 0 ? '#fafafa' : '#fff', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                <tr key={event.id} style={{ 
+                                    borderBottom: '1px solid #e2e8f0', 
+                                    background: idx % 2 === 0 ? '#f8fafc' : '#ffffff', 
+                                    borderLeft: `4px solid ${primaryCatColor}`,
+                                    pageBreakInside: 'avoid', 
+                                    breakInside: 'avoid' 
+                                }}>
                                     <td style={{ padding: '12px 10px', fontWeight: 600, verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                                         <div>{dateDisplay}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#666', fontWeight: 500, marginTop: '2px' }}>{timeDisplay}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>{timeDisplay}</div>
                                     </td>
-                                    <td style={{ padding: '12px 10px', fontWeight: 700, verticalAlign: 'top', color: '#000', fontSize: '0.9rem' }}>
+                                    <td style={{ padding: '12px 10px', fontWeight: 700, verticalAlign: 'top', color: '#0f172a', fontSize: '0.9rem' }}>
                                         {event.title}
                                     </td>
-                                    <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#333', fontWeight: 600 }}>
+                                    <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#334155', fontWeight: 600 }}>
                                         {event.club?.name || 'Burnaby Central'}
                                     </td>
                                     <td style={{ padding: '12px 10px', verticalAlign: 'top' }}>
-                                        <span style={{ 
-                                            display: 'inline-block',
-                                            padding: '4px 12px', 
-                                            borderRadius: '999px', 
-                                            fontSize: '0.72rem', 
-                                            fontWeight: 800,
-                                            background: catColor,
-                                            color: '#FFFFFF',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.03em'
-                                        }}>
-                                            {catName}
-                                        </span>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                            {tagsToRender.map((tag, tIdx) => {
+                                                const catColor = getCategoryColor(tag);
+                                                return (
+                                                    <span key={tIdx} style={{ 
+                                                        display: 'inline-block',
+                                                        padding: '3px 10px', 
+                                                        borderRadius: '999px', 
+                                                        fontSize: '0.70rem', 
+                                                        fontWeight: 800,
+                                                        background: catColor,
+                                                        color: '#FFFFFF',
+                                                        WebkitPrintColorAdjust: 'exact',
+                                                        printColorAdjust: 'exact',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.03em',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {tag}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
                                     </td>
-                                    <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#555', lineHeight: 1.4, fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>
-                                        {event.description || <span style={{ color: '#aaa', fontStyle: 'italic' }}>No description.</span>}
+                                    <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#475569', lineHeight: 1.4, fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>
+                                        {event.description || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No description.</span>}
                                     </td>
                                 </tr>
                             );

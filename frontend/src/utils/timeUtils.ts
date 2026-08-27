@@ -1,4 +1,57 @@
-import { parseISO, differenceInMinutes, format } from 'date-fns';
+import { parseISO, differenceInMinutes, format, isSameDay } from 'date-fns';
+
+/**
+ * Checks if an event is an all-day event (start time is midnight and no specific timed end).
+ */
+export const isAllDayEvent = (date: string | Date, endDate?: string | Date | null): boolean => {
+    const start = typeof date === 'string' ? parseISO(date) : date;
+    if (isNaN(start.getTime())) return false;
+    
+    const isStartMidnight = start.getHours() === 0 && start.getMinutes() === 0;
+    if (!isStartMidnight) return false;
+
+    if (!endDate) return true;
+
+    const end = typeof endDate === 'string' ? parseISO(endDate) : endDate;
+    if (isNaN(end.getTime())) return true;
+
+    const isEndMidnight = end.getHours() === 0 && end.getMinutes() === 0;
+    const isEndOfDay = end.getHours() === 23 && end.getMinutes() === 59;
+
+    return isEndMidnight || isEndOfDay;
+};
+
+/**
+ * Formats event time cleanly for calendar lists and cards:
+ * - "All Day" or "All Day (Sep 21 – Sep 23)" for all-day events
+ * - "3:00 PM" or "3:00 PM – 4:00 PM" for timed events
+ */
+export const formatEventTime = (date: string | Date, endDate?: string | Date | null): string => {
+    const start = typeof date === 'string' ? parseISO(date) : date;
+    if (isNaN(start.getTime())) return '';
+
+    if (isAllDayEvent(start, endDate)) {
+        if (endDate) {
+            const end = typeof endDate === 'string' ? parseISO(endDate) : endDate;
+            if (!isNaN(end.getTime()) && !isSameDay(start, end)) {
+                return `All Day (${format(start, 'MMM d')} – ${format(end, 'MMM d')})`;
+            }
+        }
+        return 'All Day';
+    }
+
+    const startStr = format(start, 'h:mm a');
+    if (!endDate) return startStr;
+
+    const end = typeof endDate === 'string' ? parseISO(endDate) : endDate;
+    if (isNaN(end.getTime())) return startStr;
+
+    if (isSameDay(start, end)) {
+        return `${startStr} – ${format(end, 'h:mm a')}`;
+    } else {
+        return `${startStr} – ${format(end, 'MMM d, h:mm a')}`;
+    }
+};
 
 /**
  * Checks if an event is "Live" (happening now).

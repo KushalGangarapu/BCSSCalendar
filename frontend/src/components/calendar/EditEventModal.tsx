@@ -63,19 +63,19 @@ export const EditEventModal = ({
             
             const startDayStr = format(parsedStart, 'yyyy-MM-dd');
             const endDayStr = format(parsedEnd, 'yyyy-MM-dd');
+            const endHours = parsedEnd.getHours();
+            const endMinutes = parsedEnd.getMinutes();
+            const isEndTimeSpecific = endHours !== 0 || endMinutes !== 0;
 
-            if (!event.recurring && startDayStr !== endDayStr) {
+            if (startDayStr !== endDayStr || isEndTimeSpecific) {
                 setHasEndDate(true);
                 setEndDateStr(endDayStr);
+                if (isEndTimeSpecific) {
+                    setEndTimeStr(`${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`);
+                }
             } else {
                 setHasEndDate(false);
                 setEndDateStr('');
-            }
-
-            const endHours = parsedEnd.getHours();
-            const endMinutes = parsedEnd.getMinutes();
-            if (endHours !== 0 || endMinutes !== 0) {
-                setEndTimeStr(`${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`);
             }
         } else {
             setHasEndDate(false);
@@ -111,8 +111,9 @@ export const EditEventModal = ({
             const startDt = new Date(startIso);
 
             let endDt: Date | null = null;
-            if (hasEndDate && endDateStr) {
-                const endIso = isAllDay ? `${endDateStr}T23:59:59` : `${endDateStr}T${endTimeStr}:00`;
+            if (hasEndDate) {
+                const targetEndDay = endDateStr || dateStr;
+                const endIso = isAllDay ? `${targetEndDay}T23:59:59` : `${targetEndDay}T${endTimeStr}:00`;
                 endDt = new Date(endIso);
             }
 

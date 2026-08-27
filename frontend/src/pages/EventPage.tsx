@@ -6,6 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../utils/calendarExport';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
+import { formatEventTime } from '../utils/timeUtils';
 
 export const EventPage = () => {
     const params = useParams();
@@ -53,6 +54,15 @@ export const EventPage = () => {
             document.title = 'BCSS Calendar';
         };
     }, [params.id]);
+
+    const recurrenceEndDate = event?.recurrenceEndDate || (() => {
+        if (!event?.recurring || !Array.isArray(events)) return null;
+        const series = events
+            .filter(e => e.title?.trim().toLowerCase() === event.title?.trim().toLowerCase() && (e.clubId || null) === (event.clubId || null) && e.recurring)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const lastInSeries = series[series.length - 1];
+        return lastInSeries ? (lastInSeries.endDate || lastInSeries.date) : null;
+    })();
 
     if (loading) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', width: '100%' }}>
@@ -131,13 +141,12 @@ export const EventPage = () => {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
                                 <Calendar size={20} style={{ color: 'var(--bcss-blue)' }} />
-                                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{format(parseISO(event.date), 'EEEE, MMMM do, yyyy')}</span>
+                                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{format(typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date), 'EEEE, MMMM do, yyyy')}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
                                 <Clock size={20} style={{ color: 'var(--bcss-blue)' }} />
                                 <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                                    {format(parseISO(event.date), 'h:mm a')}
-                                    {event.endDate && ` – ${format(parseISO(event.endDate), 'h:mm a')}`}
+                                    {formatEventTime(event.date, event.endDate)}
                                 </span>
                             </div>
                             {event.club && (
@@ -178,7 +187,7 @@ export const EventPage = () => {
                                     animation: 'fadeUp 0.15s ease both',
                                 }}>
                                     <a 
-                                        href={generateGoogleCalendarUrl(event)} 
+                                        href={generateGoogleCalendarUrl(event, recurrenceEndDate)} 
                                         target="_blank" 
                                         rel="noopener noreferrer" 
                                         onClick={() => setShowExportDropdown(false)}
