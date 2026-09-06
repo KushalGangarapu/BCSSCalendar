@@ -1,6 +1,7 @@
 import { format, isSameDay } from 'date-fns';
 import { Trash2, Clock } from 'lucide-react';
 import { isEventOnDay, formatEventTime } from '../../utils/timeUtils';
+import { RichDescription } from '../common/RichDescription';
 
 export const DayView = ({
     month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
@@ -79,9 +80,7 @@ export const DayView = ({
                                 </div>
 
                                 {ev.description && (
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.5 }}>
-                                        {ev.description}
-                                    </div>
+                                    <RichDescription content={ev.description} style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.5 }} />
                                 )}
 
                                 {isAdmin && hovered?.id === ev.id && (

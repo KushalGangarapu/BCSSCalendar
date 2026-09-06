@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../../utils/calendarExport';
 import { useAppData } from '../../context/DataContext';
 import { isAllDayEvent } from '../../utils/timeUtils';
+import { RichDescription } from '../common/RichDescription';
 
 interface EventDetailModalProps {
     event: any;
@@ -138,9 +139,8 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                         color: 'var(--text-secondary)', 
                         lineHeight: 1.6, 
                         fontSize: '0.98rem', 
-                        whiteSpace: 'pre-wrap'
                     }}>
-                        {event.description}
+                        <RichDescription content={event.description} />
                     </div>
                 )}
 

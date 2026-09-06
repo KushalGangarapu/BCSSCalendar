@@ -1,5 +1,6 @@
 import { format, parseISO, isSameDay } from 'date-fns';
 import { formatEventTime, isAllDayEvent } from '../../utils/timeUtils';
+import { RichDescription } from '../common/RichDescription';
 
 interface PrintScheduleProps {
     events: any[];
@@ -138,8 +139,15 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
                                             })}
                                         </div>
                                     </td>
-                                    <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#475569', lineHeight: 1.4, fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>
-                                        {event.description || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No description.</span>}
+                                    <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#475569', lineHeight: 1.4, fontSize: '0.8rem' }}>
+                                        {event.description ? (
+                                            <RichDescription 
+                                                content={event.description} 
+                                                style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.4 }} 
+                                            />
+                                        ) : (
+                                            <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No description.</span>
+                                        )}
                                     </td>
                                 </tr>
                             );

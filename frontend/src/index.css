@@ -519,12 +519,240 @@ a:hover {
 
 #print-schedule-section { display: none; }
 
-.pwa-banner {
-  position: fixed; bottom: 28px; right: 28px; z-index: 9999;
-  background: #FFFFFF; color: var(--text-main); padding: 18px 24px;
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-  display: flex; gap: 18px; max-width: 420px; border: 1px solid var(--border-strong);
+/* ============================================
+   PWA Install Floating Banner
+   ============================================ */
+@keyframes pwaSlideUp {
+  from {
+    transform: translateY(80px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
+
+.pwa-banner {
+  position: fixed;
+  z-index: 9999;
+  background: #FFFFFF;
+  color: var(--text-main);
+  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.2), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: pwaSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-sizing: border-box;
+}
+
+/* Desktop layout: floating at bottom right */
+@media (min-width: 641px) {
+  .pwa-banner {
+    bottom: 36px;
+    right: 28px;
+    max-width: 410px;
+    padding: 14px 18px;
+  }
+}
+
+/* Mobile layout: elevated higher up with safe margins, no clipping */
+@media (max-width: 640px) {
+  .pwa-banner {
+    left: 12px;
+    right: 12px;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    max-width: none;
+    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+  }
+}
+
+.pwa-banner-logo {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid var(--bcss-red);
+  padding: 4px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(217, 4, 41, 0.15);
+  flex-shrink: 0;
+}
+
+.pwa-banner-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.pwa-banner-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pwa-banner-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.94rem;
+  line-height: 1.25;
+  color: var(--text-main);
+  white-space: normal;
+  overflow: visible;
+}
+
+.pwa-banner-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pwa-banner-btn-install {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--bcss-red);
+  color: #FFFFFF;
+  border: none;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.84rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(217, 4, 41, 0.25);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.pwa-banner-btn-install:hover {
+  background: var(--bcss-red-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(217, 4, 41, 0.35);
+}
+
+.pwa-banner-btn-install:active {
+  transform: translateY(0);
+}
+
+.pwa-banner-btn-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pwa-banner-btn-dismiss:hover {
+  background: var(--bg-secondary);
+  color: var(--text-main);
+}
+
+/* ============================================
+   Rich Description & Event Links
+   ============================================ */
+.rich-description {
+  color: var(--text-secondary);
+  line-height: 1.65;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+.rich-description p {
+  margin-top: 0;
+  margin-bottom: 0.6em;
+}
+
+.rich-description p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-description a.event-inline-link {
+  color: var(--bcss-red);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.rich-description a.event-inline-link:hover {
+  color: var(--bcss-red-hover);
+  text-decoration: underline;
+  opacity: 0.88;
+}
+
+.rich-description ul, .rich-description ol {
+  margin-top: 0.3em;
+  margin-bottom: 0.6em;
+  padding-left: 1.3em;
+}
+
+.rich-description li {
+  margin-bottom: 0.2em;
+}
+
+.quick-action-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-decoration: none;
+  background: var(--bcss-red-soft);
+  color: var(--bcss-red);
+  border: 1px solid rgba(217, 4, 41, 0.25);
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-action-link-btn:hover {
+  background: var(--bcss-red);
+  color: #FFFFFF;
+  border-color: var(--bcss-red);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(217, 4, 41, 0.25);
+}
+
+.quick-action-link-btn:active {
+  transform: translateY(0);
+}
+
 
 @media print {
   @page {
@@ -569,5 +797,25 @@ a:hover {
   #print-schedule-section td, #print-schedule-section th {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+  #print-schedule-section a,
+  #print-schedule-section .event-inline-link {
+    color: #d90429 !important;
+    text-decoration: underline !important;
+    text-underline-offset: 2px !important;
+    font-weight: 700 !important;
+    display: inline !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  #print-schedule-section .event-inline-link svg {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    margin-left: 3px !important;
+    color: #d90429 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

@@ -8,9 +8,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'inline',
-      includeAssets: ['cropped-wildcat-logo.png'],
+      includeAssets: ['cropped-wildcat-logo.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
       devOptions: {
-        enabled: true
+        enabled: true,
+        type: 'module'
       },
       workbox: {
         cleanupOutdatedCaches: true,
@@ -63,6 +64,7 @@ export default defineConfig({
         ],
       },
       manifest: {
+        id: '/',
         name: 'Wildcat Calendar',
         short_name: 'Wildcats',
         description: 'Burnaby Central Secondary School Clubs and Events',
@@ -73,14 +75,22 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-            src: '/cropped-wildcat-logo.png',
+            src: '/pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: '/cropped-wildcat-logo.png',
+            src: '/pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }

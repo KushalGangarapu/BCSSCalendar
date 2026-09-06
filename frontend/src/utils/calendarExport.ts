@@ -1,5 +1,6 @@
 import { isAllDayEvent } from './timeUtils';
 import { addDays, parseISO } from 'date-fns';
+import { MARKDOWN_LINK_REGEX } from './linkUtils';
 
 export interface CalendarEvent {
     id: string;
@@ -56,8 +57,13 @@ export const generateGoogleCalendarUrl = (event: CalendarEvent, recurrenceEndDat
         end = formatToUtcBasic(event.endDate || getFallbackEndDate(event.date));
     }
 
+    const cleanDescription = (event.description || '').replace(
+        new RegExp(MARKDOWN_LINK_REGEX.source, 'g'),
+        '$1 ($2)'
+    );
+
     const details = encodeURIComponent(
-        `${event.description || ''}\n\nHosted by: ${event.club?.name || 'School Event'}`
+        `${cleanDescription}\n\nHosted by: ${event.club?.name || 'School Event'}`
     );
     const text = encodeURIComponent(event.title);
 

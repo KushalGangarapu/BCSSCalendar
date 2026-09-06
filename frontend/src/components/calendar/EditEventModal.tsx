@@ -3,6 +3,7 @@ import { X, Edit3, Save } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '../Toast';
 import { invalidateCache } from '../../utils/apiCache';
+import { DescriptionEditor } from '../common/DescriptionEditor';
 
 interface EditEventModalProps {
     event: any;
@@ -314,16 +315,13 @@ export const EditEventModal = ({
                         </div>
                     </div>
 
-                    <div>
-                        <label className="label">Description / Details</label>
-                        <textarea
-                            className="input"
-                            value={description}
-                            onChange={e => setDescription(e.target.value)}
-                            placeholder="Add event information, location details, or requirements..."
-                            rows={3}
-                        />
-                    </div>
+                    <DescriptionEditor
+                        label="Description / Details"
+                        value={description}
+                        onChange={setDescription}
+                        placeholder="Add event information, requirements, or links (e.g. https://forms.gle/...)"
+                        rows={3}
+                    />
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                         <button

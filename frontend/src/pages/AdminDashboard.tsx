@@ -11,6 +11,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
 import type { ClubItem } from '../context/DataContext';
 import { filterRecurringEvents } from '../utils/recurringUtils';
+import { DescriptionEditor } from '../components/common/DescriptionEditor';
 
 type Club = ClubItem;
 
@@ -587,7 +588,13 @@ export const AdminDashboard = () => {
                             </div>
                         </div>
 
-                        <div><label className="label">Event Details / Description</label><textarea className="input" rows={3} style={{ resize: 'vertical' }} placeholder="Add room location, instructions, or agenda notes..." value={description} onChange={e => setDescription(e.target.value)} /></div>
+                        <DescriptionEditor
+                            label="Event Details / Description"
+                            value={description}
+                            onChange={setDescription}
+                            placeholder="Add room location, instructions, or links (e.g. https://forms.gle/...)"
+                            rows={3}
+                        />
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
                             <button type="button" onClick={resetEventForm} className="btn btn-ghost">Cancel</button>

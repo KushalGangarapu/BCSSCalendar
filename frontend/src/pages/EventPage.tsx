@@ -7,6 +7,7 @@ import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../utils/calenda
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
 import { formatEventTime } from '../utils/timeUtils';
+import { RichDescription } from '../components/common/RichDescription';
 
 export const EventPage = () => {
     const params = useParams();
@@ -231,7 +232,7 @@ export const EventPage = () => {
                             <Sparkles size={18} style={{ color: 'var(--bcss-blue)' }} /> About This Event
                         </h3>
                         {event.description ? (
-                            <p style={{ fontSize: '1.08rem', lineHeight: 1.7, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{event.description}</p>
+                            <RichDescription content={event.description} style={{ fontSize: '1.08rem', lineHeight: 1.7 }} />
                         ) : (
                             <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No additional details provided for this event.</p>
                         )}

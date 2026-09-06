@@ -72,7 +72,7 @@ export const MasterCalendar = () => {
 
     const handleExportPDF = () => {
         const originalTitle = document.title;
-        document.title = '';
+        document.title = `BCSS Calendar - ${format(month, 'MMMM yyyy')}`;
         window.print();
         setTimeout(() => {
             document.title = originalTitle || 'Master Calendar | BCSS Calendar';
