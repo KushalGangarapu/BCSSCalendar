@@ -65,10 +65,10 @@ export default defineConfig({
       },
       manifest: {
         id: '/',
-        name: 'Wildcat Calendar',
-        short_name: 'Wildcats',
+        name: 'Wildcat Clubs',
+        short_name: 'Wildcat Clubs',
         description: 'Burnaby Central Secondary School Clubs and Events',
-        theme_color: '#D32F2F',
+        theme_color: '#D90429',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

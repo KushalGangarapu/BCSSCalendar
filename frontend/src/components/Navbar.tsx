@@ -28,7 +28,10 @@ export const Navbar = () => {
             <div style={{
                 maxWidth: '1360px',
                 margin: '0 auto',
-                padding: isMobile ? '10px 16px' : '14px 32px',
+                paddingTop: isMobile ? '10px' : '14px',
+                paddingBottom: isMobile ? '10px' : '14px',
+                paddingLeft: isMobile ? 'max(12px, env(safe-area-inset-left))' : 'max(32px, env(safe-area-inset-left))',
+                paddingRight: isMobile ? 'max(12px, env(safe-area-inset-right))' : 'max(32px, env(safe-area-inset-right))',
                 display: 'flex',
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -70,7 +73,7 @@ export const Navbar = () => {
                             />
                         </div>
                     </div>
-                    <div>
+                    <div className="navbar-brand-text">
                         <div style={{ 
                             fontSize: isMobile ? '1.05rem' : '1.3rem', 
                             fontWeight: 900, 
@@ -99,8 +102,8 @@ export const Navbar = () => {
                     </div>
                 </div>
 
-                {/* Integrated Single-Row Navigation Pill Track (Right) */}
-                <nav style={{
+                {/* Integrated Single-Row Navigation Pill Track (Right) — scrolls instead of clipping on narrow screens */}
+                <nav className="swipe-pill-track" style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: isMobile ? '4px' : '6px',
@@ -108,7 +111,9 @@ export const Navbar = () => {
                     padding: isMobile ? '4px' : '5px',
                     borderRadius: 'var(--radius-pill)',
                     border: '1px solid var(--border)',
-                    flexShrink: 0,
+                    flexShrink: 1,
+                    minWidth: 0,
+                    maxWidth: '100%',
                     width: 'fit-content',
                     boxSizing: 'border-box'
                 }}>
@@ -122,14 +127,14 @@ export const Navbar = () => {
                                 style={{
                                     display: 'inline-flex', 
                                     alignItems: 'center', 
-                                    gap: isMobile ? '5px' : '7px',
-                                    padding: isMobile ? '7px 12px' : '9px 22px', 
+                                    gap: isMobile ? '4px' : '7px',
+                                    padding: isMobile ? '7px 10px' : '9px 22px', 
                                     borderRadius: 'var(--radius-pill)',
                                     color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
                                     background: isActive ? 'var(--bcss-red)' : 'transparent',
                                     boxShadow: isActive ? '0 4px 12px rgba(217, 4, 41, 0.25)' : 'none',
                                     fontWeight: isActive ? 800 : 700, 
-                                    fontSize: isMobile ? '0.82rem' : '0.92rem', 
+                                    fontSize: isMobile ? '0.8rem' : '0.92rem', 
                                     fontFamily: 'var(--font-display)',
                                     textDecoration: 'none', 
                                     transition: 'all 0.2s ease',
@@ -139,7 +144,7 @@ export const Navbar = () => {
                                     lineHeight: 1
                                 }}
                             >
-                                <Icon size={isMobile ? 15 : 17} style={{ color: isActive ? '#FFFFFF' : 'var(--bcss-red)' }} />
+                                <Icon size={isMobile ? 14 : 17} style={{ color: isActive ? '#FFFFFF' : 'var(--bcss-red)', flexShrink: 0 }} />
                                 <span>{label}</span>
                             </NavLink>
                         );

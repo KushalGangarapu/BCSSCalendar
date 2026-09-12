@@ -94,13 +94,13 @@ export const PwaInstallBanner = () => {
     if (!isVisible) return null;
 
     return (
-        <aside className="pwa-banner" aria-label="Install Wildcat Calendar">
+        <aside className="pwa-banner" aria-label="Install Wildcat Clubs">
             <div className="pwa-banner-logo">
                 <img src="/cropped-wildcat-logo.png" alt="Wildcat mascot" />
             </div>
             <div className="pwa-banner-content">
                 <div className="pwa-banner-title">
-                    Install Wildcat Calendar
+                    Install Wildcat Clubs
                 </div>
                 <div className="pwa-banner-desc">
                     Fast access right from your home screen.

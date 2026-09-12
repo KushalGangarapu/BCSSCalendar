@@ -6,6 +6,7 @@ import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../../utils/cale
 import { useAppData } from '../../context/DataContext';
 import { isAllDayEvent } from '../../utils/timeUtils';
 import { RichDescription } from '../common/RichDescription';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface EventDetailModalProps {
     event: any;
@@ -19,6 +20,7 @@ interface EventDetailModalProps {
 export const EventDetailModal = ({ event, onClose, categories = [], categoryColor, isAdmin, onEditEvent }: EventDetailModalProps) => {
     const navigate = useNavigate();
     const { events: allEvents } = useAppData();
+    const isMobile = useIsMobile();
     const [showExportDropdown, setShowExportDropdown] = useState(false);
 
     if (!event) return null;
@@ -39,7 +41,7 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal" onClick={e => e.stopPropagation()} style={{
                 maxWidth: '480px',
-                padding: '36px',
+                padding: isMobile ? '24px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)' : '36px',
                 position: 'relative',
                 background: '#FFFFFF',
                 borderRadius: 'var(--radius-xl)',
@@ -144,7 +146,7 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                     </div>
                 )}
 
-                <div style={{ marginTop: '28px', display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr' : (event.clubId ? '1fr 1fr' : '1fr'), gap: '12px' }}>
+                <div style={{ marginTop: '28px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : (isAdmin ? '1fr 1fr' : (event.clubId ? '1fr 1fr' : '1fr')), gap: '12px' }}>
                     <button 
                         onClick={() => navigate(`/events/${event.id}`)} 
                         className="btn btn-red" 

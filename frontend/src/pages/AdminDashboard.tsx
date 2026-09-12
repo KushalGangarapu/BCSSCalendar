@@ -824,7 +824,7 @@ export const AdminDashboard = () => {
                             justifyContent: 'center',
                             padding: '20px'
                         }}>
-                            <div className="modal" style={{ width: '100%', maxWidth: '620px', padding: '28px', background: '#FFFFFF', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}>
+                            <div className="modal" style={{ width: '100%', maxWidth: '620px', padding: isMobile ? '20px 16px calc(env(safe-area-inset-bottom, 0px) + 20px)' : '28px', background: '#FFFFFF', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                     <h3 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}>
                                         <Crop size={22} style={{ color: 'var(--bcss-red)' }} /> Crop Banner Photo

@@ -9,10 +9,31 @@ interface PrintScheduleProps {
 }
 
 export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleProps) => {
+    const toDate = (d: string | Date) => (typeof d === 'string' ? parseISO(d) : d);
+
     // Sort events by date ascending
-    const sortedEvents = [...events].sort(
+    const sorted = [...events].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
+
+    // Group each recurring series into a single row that lists every occurrence date
+    const seriesMap = new Map<string, any[]>();
+    const singleEvents: any[] = [];
+    for (const ev of sorted) {
+        if (!ev.recurring) {
+            singleEvents.push(ev);
+            continue;
+        }
+        const key = `${(ev.title || '').trim().toLowerCase()}_${ev.clubId || 'none'}`;
+        const list = seriesMap.get(key) || [];
+        list.push(ev);
+        seriesMap.set(key, list);
+    }
+
+    const sortedEvents = [
+        ...singleEvents.map(ev => ({ event: ev, dates: [toDate(ev.date)] as Date[] })),
+        ...[...seriesMap.values()].map(list => ({ event: list[0], dates: list.map(ev => toDate(ev.date)) as Date[] })),
+    ].sort((a, b) => a.dates[0].getTime() - b.dates[0].getTime());
 
     const getCategoryColor = (catName: string) => {
         const matched = categories.find(c => c.name.toLowerCase().trim() === catName.toLowerCase().trim());
@@ -43,7 +64,7 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
             {/* Event Count / Meta Info */}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#555', marginBottom: '16px', fontWeight: 500, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                 <span>Report Generated: {new Date().toLocaleDateString(undefined, { dateStyle: 'full' })}</span>
-                <span>Total Scheduled Events: {events.length}</span>
+                <span>Total Scheduled Events: {sortedEvents.length}</span>
             </div>
 
             {/* Schedule Table */}
@@ -63,14 +84,21 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedEvents.map((event, idx) => {
-                            const startDate = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
-                            const endDate = event.endDate ? (typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate)) : null;
+                        {sortedEvents.map(({ event, dates }, idx) => {
+                            const startDate = dates[0];
+                            const endDate = event.endDate ? toDate(event.endDate) : null;
 
                             let dateDisplay = '';
                             let timeDisplay = '';
 
-                            if (endDate && !isSameDay(startDate, endDate)) {
+                            if (event.recurring) {
+                                const uniqueDays = [...new Set(dates.map(d => format(d, 'yyyy-MM-dd')))].map(s => parseISO(s));
+                                const sameMonth = uniqueDays.every(d => d.getMonth() === uniqueDays[0].getMonth() && d.getFullYear() === uniqueDays[0].getFullYear());
+                                dateDisplay = sameMonth
+                                    ? `${format(uniqueDays[0], 'MMM')} ${uniqueDays.map(d => format(d, 'd')).join(', ')}`
+                                    : uniqueDays.map(d => format(d, 'MMM d')).join(', ');
+                                timeDisplay = formatEventTime(startDate, endDate);
+                            } else if (endDate && !isSameDay(startDate, endDate)) {
                                 dateDisplay = `${format(startDate, 'EEE, MMM d')} – ${format(endDate, 'EEE, MMM d')}`;
                                 timeDisplay = isAllDayEvent(startDate, endDate) ? 'All Day' : formatEventTime(startDate, endDate);
                             } else {
@@ -96,6 +124,14 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
 
                             const primaryCatColor = getCategoryColor(tagsToRender[0]);
 
+                            const recurrenceLabel = (() => {
+                                const weekday = format(startDate, 'EEEE');
+                                if (event.recurring === 'weekly') return `Repeats weekly on ${weekday}s`;
+                                if (event.recurring === 'biweekly') return `Repeats every 2 weeks on ${weekday}s`;
+                                if (event.recurring === 'monthly') return `Repeats monthly on the ${format(startDate, 'do')}`;
+                                return null;
+                            })();
+
                             return (
                                 <tr key={event.id} style={{ 
                                     borderBottom: '1px solid #e2e8f0', 
@@ -110,6 +146,11 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
                                     </td>
                                     <td style={{ padding: '12px 10px', fontWeight: 700, verticalAlign: 'top', color: '#0f172a', fontSize: '0.9rem' }}>
                                         {event.title}
+                                        {recurrenceLabel && (
+                                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--bcss-red)', marginTop: '4px' }}>
+                                                {recurrenceLabel}
+                                            </div>
+                                        )}
                                     </td>
                                     <td style={{ padding: '12px 10px', verticalAlign: 'top', color: '#334155', fontWeight: 600 }}>
                                         {event.club?.name || 'Burnaby Central'}

@@ -135,7 +135,8 @@ export const ClubsDirectory = () => {
                                     border: '1px solid var(--border)',
                                     borderRadius: '12px',
                                     boxShadow: '0 12px 30px rgba(0, 0, 0, 0.12)',
-                                    minWidth: '250px',
+                                    minWidth: isMobile ? '0' : '250px',
+                                    maxWidth: 'calc(100vw - 32px)',
                                     maxHeight: '380px',
                                     overflowY: 'auto',
                                     padding: '6px 0',
@@ -234,7 +235,7 @@ export const ClubsDirectory = () => {
             {/* Club Grid View */}
             <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(280px, 28vw, 360px), 1fr))', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, clamp(280px, 28vw, 360px)), 1fr))', 
                 gap: 'clamp(16px, 2.5vw, 24px)' 
             }}>
                 {loading ? (

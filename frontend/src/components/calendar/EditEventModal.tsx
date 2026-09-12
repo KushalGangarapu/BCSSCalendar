@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { useToast } from '../Toast';
 import { invalidateCache } from '../../utils/apiCache';
 import { DescriptionEditor } from '../common/DescriptionEditor';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface EditEventModalProps {
     event: any;
@@ -21,6 +22,7 @@ export const EditEventModal = ({
     categories = [],
 }: EditEventModalProps) => {
     const { toast } = useToast();
+    const isMobile = useIsMobile();
     const [submitting, setSubmitting] = useState(false);
 
     const [title, setTitle] = useState('');
@@ -236,7 +238,7 @@ export const EditEventModal = ({
                                 All Day Event
                             </label>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: isAllDay ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: (isAllDay || isMobile) ? '1fr' : '1fr 1fr', gap: '10px' }}>
                             <input
                                 type="date"
                                 className="input"
@@ -268,7 +270,7 @@ export const EditEventModal = ({
                         </label>
 
                         {hasEndDate && (
-                            <div style={{ display: 'grid', gridTemplateColumns: isAllDay ? '1fr' : '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: (isAllDay || isMobile) ? '1fr' : '1fr 1fr', gap: '10px', marginTop: '6px' }}>
                                 <input
                                     type="date"
                                     className="input"

@@ -67,6 +67,11 @@ export const isEventLive = (eventDateISO: string, endDateISO?: string | null): b
         return now >= eventTime && now <= endTime;
     }
 
+    // All-day events with no explicit end are live for the entire day
+    if (isAllDayEvent(eventTime, null)) {
+        return isSameDay(now, eventTime);
+    }
+
     // Fallback: live for 60 minutes after start
     const diff = differenceInMinutes(now, eventTime);
     return diff >= 0 && diff < 60;

@@ -24,7 +24,7 @@ The system is designed from the ground up to solve a real-world problem: replaci
 * **Smart Multi-Day Event Rendering:** Multi-day events automatically render on their start date, end date, and currently active day, displaying date ranges (`MMM d – MMM d`) inside cell pills while remaining clean on past/future middle days.
 * **Zero-Horizontal-Scroll Responsive Layout:** Responsive navigation bars and calendar toolbars dynamically adapt to avoid horizontal overflow on all screen resolutions from 320px ultra-compact phones to 4K displays.
 * **Mobile Bottom Sheets:** Modals automatically morph into touch-friendly slide-up bottom sheets (`max-height: 88dvh`, safe-area insets) on mobile viewports.
-* **Print Layouts & Interactive PDF Schedules:** Implements dedicated print styles (`PrintSchedule.tsx`) allowing admins and students to export clean, branded monthly schedules. All URLs and Markdown links in descriptions compile directly into native, clickable `/URI` hyperlinks inside the exported PDF for instant access to meeting forms and sign-up sheets.
+* **Print Layouts & Interactive PDF Schedules:** Implements dedicated print styles (`PrintSchedule.tsx`) allowing admins and students to export clean, branded monthly schedules. Recurring series collapse into a single row listing every occurrence date in the month with a human-readable cadence label ("Repeats weekly on Fridays"). All URLs and Markdown links in descriptions compile directly into native, clickable `/URI` hyperlinks inside the exported PDF for instant access to meeting forms and sign-up sheets.
 
 ### Rich Event Descriptions & Interactive Links
 * **Markdown & Auto-Linked URLs:** Event descriptions support full Markdown syntax (`react-markdown`, `remark-gfm`) and automatic conversion of plain text URLs into interactive hyperlinks.
@@ -46,7 +46,7 @@ The system is designed from the ground up to solve a real-world problem: replaci
 * **Unified Global Data Context:** Frontend uses a central `DataContext` with bootstrap synchronization for instantaneous 0ms page loads and seamless background refreshes.
 
 ### Progressive Web App (PWA) Integration
-* **Installed Application Experience:** Fully installable on iOS, Android, macOS, and Windows with a standalone display mode and custom branding icons (authentic 192×192 and 512×512 maskable).
+* **Installed Application Experience:** Fully installable on iOS, Android, macOS, and Windows with a standalone display mode and custom branding icons (authentic 192×192 and 512×512 maskable). Installs to the home screen as **"Wildcat Clubs"**.
 * **Native Install Prompting & Floating Banner (`PwaInstallBanner.tsx`):** Listens to native browser `beforeinstallprompt` and `appinstalled` events. The floating banner is styled with safe mobile bottom-margin elevation to prevent occlusion of navigation gestures, and automatically suppresses itself when running in standalone mode or dismissed.
 * **Service Worker & Caching:** Utilizes `vite-plugin-pwa` with custom Workbox caching rules to store static assets and club images.
 * **Offline Fallback:** Features offline support with navigation fallbacks to `/index.html` to guarantee that students can access cached schedules inside school hallways where cellular reception is weak.
@@ -220,8 +220,10 @@ BCSS-Calendar/
 │   │   │   └── api.ts                # Express REST API endpoints mapping
 │   │   ├── types/
 │   │   │   └── express.d.ts          # Express request TS interface extensions
+│   │   ├── utils/
+│   │   │   ├── cache.ts              # In-memory TTL cache for public API data
+│   │   │   └── syncManager.ts        # Server-Sent Events (SSE) broadcast manager
 │   │   ├── config.ts                 # Port, JWT secret, environment configuration
-│   │   ├── syncManager.ts            # Server-Sent Events (SSE) broadcast manager
 │   │   └── index.ts                  # Server entrypoint (Express + CORS setup)
 │   ├── tsconfig.json
 │   └── package.json
@@ -240,13 +242,15 @@ BCSS-Calendar/
     │   │   ├── common/
     │   │   │   ├── DescriptionEditor.tsx # Rich description editor with link modal & live preview
     │   │   │   └── RichDescription.tsx   # Sanitized markdown & link renderer
+    │   │   ├── MobileFilterDropdown.tsx  # Touch-friendly multi-select filter dropdown
     │   │   ├── Navbar.tsx                # Zero-overflow responsive navigation bar
-    │   │   ├── Toast.tsx                 # Interactive alert messages provider
-    │   │   └── PwaInstallBanner.tsx      # Elevated PWA installation banner prompt
+    │   │   ├── PwaInstallBanner.tsx      # Elevated PWA installation banner prompt
+    │   │   ├── ScrollToTop.tsx           # Route-change scroll restoration
+    │   │   ├── Skeleton.tsx              # CSS-pulsed skeleton loading screens
+    │   │   └── Toast.tsx                 # Interactive alert messages provider
     │   ├── context/
     │   │   └── DataContext.tsx           # Real-time state store & SSE listener
     │   ├── hooks/
-    │   │   ├── useFollowedClubs.ts       # LocalStorage listener hook for feeds
     │   │   ├── useIsMobile.ts            # Dynamic window-resize listener hook
     │   │   └── usePageTitle.ts           # Title & SEO synchronization hook
     │   ├── pages/
@@ -258,11 +262,12 @@ BCSS-Calendar/
     │   │   ├── EventPage.tsx             # Dedicated full-page event view
     │   │   └── MasterCalendar.tsx        # Calendar page integrating all views
     │   ├── utils/
+    │   │   ├── apiCache.ts               # Session cache & core data prefetching
     │   │   ├── calendarExport.ts         # Google & Apple calendar app deep link helpers
     │   │   ├── cropImage.ts              # Easy-crop helper mapping
     │   │   ├── linkUtils.ts              # URL safety validation & link parsing
+    │   │   ├── recurringUtils.ts         # Recurring series collapse for list views
     │   │   └── timeUtils.ts              # Timezone conversion & live event calculation
-    │   ├── App.css
     │   ├── App.tsx                   # Main routes mapping
     │   ├── index.css                 # Custom BCSS design system CSS stylesheet
     │   └── main.tsx                  # Vite render mount

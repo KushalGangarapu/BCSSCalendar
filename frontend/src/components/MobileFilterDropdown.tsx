@@ -72,7 +72,8 @@ export const MobileFilterDropdown = ({ options, onToggle, label = 'Filters' }: M
                     border: '1px solid var(--border-strong)', 
                     borderRadius: 'var(--radius-lg)',
                     boxShadow: 'var(--shadow-lg)', 
-                    minWidth: '240px', 
+                    minWidth: 'min(240px, calc(100vw - 32px))',
+                    maxWidth: 'calc(100vw - 32px)',
                     padding: '8px 0',
                     animation: 'fadeUp 0.15s ease both',
                 }}>

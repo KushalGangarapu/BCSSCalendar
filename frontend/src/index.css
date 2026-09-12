@@ -124,8 +124,15 @@ a:hover {
   width: 100%;
   max-width: 1360px;
   margin: 0 auto;
-  padding: var(--page-pad-y) var(--page-pad-x) calc(var(--page-pad-y) + 60px) var(--page-pad-x);
+  padding: var(--page-pad-y) max(var(--page-pad-x), env(safe-area-inset-right)) calc(var(--page-pad-y) + 60px) max(var(--page-pad-x), env(safe-area-inset-left));
   box-sizing: border-box;
+}
+
+/* Keep the navbar fully visible on very narrow phones: drop the "BCSS" wordmark so the nav pills fit */
+@media (max-width: 380px) {
+  .navbar-brand-text {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {

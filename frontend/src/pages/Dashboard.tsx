@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Eye, Calendar, Users, ArrowRight, Heart, Star, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { isEventLive, isAllDayEvent } from '../utils/timeUtils';
+import { isEventLive, isAllDayEvent, formatEventTime } from '../utils/timeUtils';
+import { endOfDay } from 'date-fns';
 import { SkeletonClubCard, SkeletonEventItem } from '../components/Skeleton';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -28,6 +29,9 @@ export const Dashboard = () => {
         const end = e.endDate ? new Date(e.endDate) : null;
         if (end) {
             return end >= now;
+        } else if (isAllDayEvent(start, null)) {
+            // All-day events stay "upcoming" for their entire day
+            return endOfDay(start) >= now;
         } else {
             const oneHourLater = new Date(start.getTime() + 60 * 60 * 1000);
             return oneHourLater >= now;
@@ -129,12 +133,13 @@ export const Dashboard = () => {
                             }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <span className="pill pill-red" style={{ fontSize: '0.72rem' }}>
-                                    Next Scheduled Event
-                                </span>
-                                {isEventLive(nextLiveEvent.date, nextLiveEvent.endDate) && (
-                                    <span style={{ fontSize: '0.68rem', background: 'var(--bcss-red)', color: '#FFF', padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontWeight: 900 }}>
-                                        LIVE NOW
+                                {isEventLive(nextLiveEvent.date, nextLiveEvent.endDate) ? (
+                                    <span className="pill" style={{ fontSize: '0.72rem', background: 'var(--bcss-red)', color: '#FFF', border: 'none' }}>
+                                        Happening Now
+                                    </span>
+                                ) : (
+                                    <span className="pill pill-red" style={{ fontSize: '0.72rem' }}>
+                                        Next Event
                                     </span>
                                 )}
                             </div>
@@ -145,10 +150,7 @@ export const Dashboard = () => {
 
                             <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                                 <Clock size={16} style={{ color: 'var(--bcss-red)' }} />
-                                {isAllDayEvent(nextLiveEvent.date, nextLiveEvent.endDate)
-                                    ? `${new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · All Day`
-                                    : `${new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at ${new Date(nextLiveEvent.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                                }
+                                {`${new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${formatEventTime(nextLiveEvent.date, nextLiveEvent.endDate)}`}
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
@@ -357,7 +359,7 @@ export const Dashboard = () => {
                                                 )}
                                             </div>
                                             <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                                {d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })} · <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{event.club?.name || 'Burnaby Central'}</span>
+                                                {formatEventTime(event.date, event.endDate)} · <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{event.club?.name || 'Burnaby Central'}</span>
                                             </div>
                                         </div>
                                     </div>

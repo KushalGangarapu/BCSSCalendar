@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Link2, Eye, Edit3, X, Check } from 'lucide-react';
 import { RichDescription } from './RichDescription';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface DescriptionEditorProps {
     value: string;
@@ -17,6 +18,7 @@ export const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
     rows = 4,
     label = 'Event Details / Description',
 }) => {
+    const isMobile = useIsMobile();
     const [mode, setMode] = useState<'write' | 'preview'>('write');
     const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
     const [linkText, setLinkText] = useState('');
@@ -270,7 +272,7 @@ export const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
                         </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.5fr', gap: '10px' }}>
                         <div>
                             <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>
                                 Link Text (optional)

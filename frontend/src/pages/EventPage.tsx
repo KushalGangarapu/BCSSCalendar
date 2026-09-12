@@ -184,7 +184,8 @@ export const EventPage = () => {
                                     boxShadow: 'var(--shadow-lg)',
                                     zIndex: 10,
                                     overflow: 'hidden',
-                                    minWidth: '220px',
+                                    minWidth: 'min(220px, calc(100vw - 24px))',
+                                    maxWidth: 'calc(100vw - 24px)',
                                     animation: 'fadeUp 0.15s ease both',
                                 }}>
                                     <a 

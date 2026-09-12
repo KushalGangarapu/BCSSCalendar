@@ -15,7 +15,7 @@ import { EditEventModal } from '../components/calendar/EditEventModal';
 import { MobileFilterDropdown } from '../components/MobileFilterDropdown';
 import { PrintSchedule } from '../components/calendar/PrintSchedule';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { useAppData } from '../context/DataContext';
+import { useAppData, type EventItem } from '../context/DataContext';
 import { filterRecurringEvents } from '../utils/recurringUtils';
 
 interface Event {
@@ -104,7 +104,7 @@ export const MasterCalendar = () => {
         }
     };
 
-    const displayEvents = filterRecurringEvents(events).filter(ev => {
+    const eventMatchesFilters = (ev: EventItem) => {
         let categoryMatch = false;
         if (selectedCategories.length === 0) {
             categoryMatch = true;
@@ -115,7 +115,9 @@ export const MasterCalendar = () => {
         }
         const followMatch = !followedOnly || (ev.clubId && followedClubIds.includes(ev.clubId));
         return categoryMatch && followMatch;
-    });
+    };
+
+    const displayEvents = filterRecurringEvents(events).filter(eventMatchesFilters);
 
     const resolveEventStyle = (ev: Event) => {
         let primaryColor = null;
@@ -511,7 +513,8 @@ export const MasterCalendar = () => {
 
             {createPortal(
                 <PrintSchedule 
-                    events={displayEvents.filter(ev => {
+                    events={events.filter(ev => {
+                        if (!eventMatchesFilters(ev)) return false;
                         try {
                             const evStart = typeof ev.date === 'string' ? parseISO(ev.date) : new Date(ev.date);
                             const evEnd = ev.endDate ? (typeof ev.endDate === 'string' ? parseISO(ev.endDate) : new Date(ev.endDate)) : evStart;
