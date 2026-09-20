@@ -5,6 +5,9 @@ import { useToast } from '../Toast';
 import { invalidateCache } from '../../utils/apiCache';
 import { DescriptionEditor } from '../common/DescriptionEditor';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { OBSERVANCE_TAG, NO_SCHOOL_TAG, MARKER_TAGS } from '../../utils/timeUtils';
+
+type ScheduleMode = 'timed' | 'allDay' | 'observance' | 'holiday';
 
 interface EditEventModalProps {
     event: any;
@@ -28,7 +31,7 @@ export const EditEventModal = ({
     const [title, setTitle] = useState('');
     const [clubId, setClubId] = useState<string>('');
     const [dateStr, setDateStr] = useState('');
-    const [isAllDay, setIsAllDay] = useState(true);
+    const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('timed');
     const [timeStr, setTimeStr] = useState('09:00');
     const [hasEndDate, setHasEndDate] = useState(false);
     const [endDateStr, setEndDateStr] = useState('');
@@ -46,40 +49,43 @@ export const EditEventModal = ({
         setRecurring(event.recurring || '');
         setSelectedTags(event.tags || []);
 
-        if (event.date) {
-            const parsedStart = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
-            setDateStr(format(parsedStart, 'yyyy-MM-dd'));
-            const hours = parsedStart.getHours();
-            const minutes = parsedStart.getMinutes();
+        const parsedStart = event.date ? (typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date)) : null;
+        const parsedEnd = event.endDate ? (typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate)) : null;
 
-            if (hours !== 0 || minutes !== 0) {
-                setIsAllDay(false);
+        const startDayStr = parsedStart ? format(parsedStart, 'yyyy-MM-dd') : '';
+        const endDayStr = parsedEnd ? format(parsedEnd, 'yyyy-MM-dd') : '';
+        const hours = parsedStart ? parsedStart.getHours() : 0;
+        const minutes = parsedStart ? parsedStart.getMinutes() : 0;
+        const endIs17 = parsedEnd ? parsedEnd.getHours() === 17 && parsedEnd.getMinutes() === 0 : false;
+
+        let mode: ScheduleMode;
+        if (parsedStart && hours === 0 && minutes === 0) {
+            mode = (event.tags || []).some((t: string) => t.trim().toLowerCase() === 'no school') ? 'holiday' : 'observance';
+        } else if (parsedStart && hours === 8 && minutes === 0 && endIs17) {
+            mode = 'allDay';
+        } else {
+            mode = 'timed';
+            if (parsedStart) {
                 setTimeStr(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
-            } else {
-                setIsAllDay(true);
             }
         }
+        setScheduleMode(mode);
+        if (parsedStart) setDateStr(startDayStr);
 
-        if (event.endDate) {
-            const parsedStart = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
-            const parsedEnd = typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate);
-            
-            const startDayStr = format(parsedStart, 'yyyy-MM-dd');
-            const endDayStr = format(parsedEnd, 'yyyy-MM-dd');
+        if (parsedEnd) {
             const endHours = parsedEnd.getHours();
             const endMinutes = parsedEnd.getMinutes();
             const isEndTimeSpecific = endHours !== 0 || endMinutes !== 0;
+            const sameDay = startDayStr === endDayStr;
 
-            if (startDayStr !== endDayStr || isEndTimeSpecific) {
-                setHasEndDate(true);
-                setEndDateStr(endDayStr);
-                if (isEndTimeSpecific) {
-                    setEndTimeStr(`${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`);
-                }
-            } else {
-                setHasEndDate(false);
-                setEndDateStr('');
+            if (isEndTimeSpecific) {
+                setEndTimeStr(`${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`);
             }
+
+            // Non-timed modes: the same-day end (17:00 / 23:59) is implicit — only multi-day shows the end date field
+            const showEndDate = mode === 'timed' ? (!sameDay || isEndTimeSpecific) : !sameDay;
+            setHasEndDate(showEndDate);
+            setEndDateStr(showEndDate ? endDayStr : '');
         } else {
             setHasEndDate(false);
             setEndDateStr('');
@@ -110,15 +116,24 @@ export const EditEventModal = ({
         setSubmitting(true);
 
         try {
-            const startIso = isAllDay ? `${dateStr}T00:00:00` : `${dateStr}T${timeStr}:00`;
+            const startIso = scheduleMode === 'timed' ? `${dateStr}T${timeStr}:00`
+                : scheduleMode === 'allDay' ? `${dateStr}T08:00:00`
+                : `${dateStr}T00:00:00`;
             const startDt = new Date(startIso);
 
             let endDt: Date | null = null;
-            if (hasEndDate) {
+            if (scheduleMode === 'allDay') {
+                const targetEndDay = (hasEndDate && endDateStr) ? endDateStr : dateStr;
+                endDt = new Date(`${targetEndDay}T17:00:00`);
+            } else if (hasEndDate) {
                 const targetEndDay = endDateStr || dateStr;
-                const endIso = isAllDay ? `${targetEndDay}T23:59:59` : `${targetEndDay}T${endTimeStr}:00`;
+                const endIso = scheduleMode === 'timed' ? `${targetEndDay}T${endTimeStr}:00` : `${targetEndDay}T23:59:59`;
                 endDt = new Date(endIso);
             }
+
+            const finalTags = selectedTags.filter(t => !MARKER_TAGS.includes(t));
+            if (scheduleMode === 'observance') finalTags.push(OBSERVANCE_TAG);
+            if (scheduleMode === 'holiday') finalTags.push(NO_SCHOOL_TAG);
 
             let allFuture = false;
             if (event.recurring) {
@@ -138,7 +153,7 @@ export const EditEventModal = ({
                     description,
                     clubId: clubId || null,
                     recurring: recurring || null,
-                    tags: selectedTags,
+                    tags: finalTags,
                 }),
             });
 
@@ -225,36 +240,47 @@ export const EditEventModal = ({
                         </select>
                     </div>
 
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <label className="label" style={{ margin: 0 }}>Start Date & Time *</label>
-                            <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={isAllDay}
-                                    onChange={e => setIsAllDay(e.target.checked)}
-                                    style={{ accentColor: 'var(--red)', cursor: 'pointer' }}
-                                />
-                                All Day Event
-                            </label>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: (isAllDay || isMobile) ? '1fr' : '1fr 1fr', gap: '10px' }}>
-                            <input
-                                type="date"
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div>
+                            <label className="label">Schedule</label>
+                            <select
                                 className="input"
-                                value={dateStr}
-                                onChange={e => setDateStr(e.target.value)}
-                                required
-                            />
-                            {!isAllDay && (
+                                value={scheduleMode}
+                                onChange={e => setScheduleMode(e.target.value as ScheduleMode)}
+                            >
+                                <option value="timed">Specific time</option>
+                                <option value="allDay">All Day (8 AM – 5 PM)</option>
+                                <option value="observance">Observed Day (school open)</option>
+                                <option value="holiday">No School (holiday)</option>
+                            </select>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                            <div>
+                                <label className="label">Start Date *</label>
                                 <input
-                                    type="time"
+                                    type="date"
                                     className="input"
-                                    value={timeStr}
-                                    onChange={e => setTimeStr(e.target.value)}
+                                    value={dateStr}
+                                    onChange={e => setDateStr(e.target.value)}
                                     required
                                 />
-                            )}
+                            </div>
+                            <div>
+                                <label className="label">{scheduleMode === 'timed' ? 'Start Time *' : 'Hours'}</label>
+                                {scheduleMode === 'timed' ? (
+                                    <input
+                                        type="time"
+                                        className="input"
+                                        value={timeStr}
+                                        onChange={e => setTimeStr(e.target.value)}
+                                        required
+                                    />
+                                ) : (
+                                    <div className="input" style={{ color: 'var(--text-muted)', cursor: 'default', background: 'var(--bg-secondary)' }}>
+                                        {scheduleMode === 'allDay' ? '8:00 AM – 5:00 PM' : scheduleMode === 'holiday' ? 'All day · no school' : 'All day · school open'}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -264,20 +290,20 @@ export const EditEventModal = ({
                                 type="checkbox"
                                 checked={hasEndDate}
                                 onChange={e => setHasEndDate(e.target.checked)}
-                                style={{ accentColor: 'var(--red)', cursor: 'pointer' }}
+                                style={{ accentColor: 'var(--bcss-red)', cursor: 'pointer' }}
                             />
-                            Multi-Day or Custom End Time
+                            {scheduleMode === 'timed' ? 'Multi-Day or Custom End Time' : 'Multi-Day Event'}
                         </label>
 
                         {hasEndDate && (
-                            <div style={{ display: 'grid', gridTemplateColumns: (isAllDay || isMobile) ? '1fr' : '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: (scheduleMode === 'timed' && !isMobile) ? '1fr 1fr' : '1fr', gap: '10px', marginTop: '6px' }}>
                                 <input
                                     type="date"
                                     className="input"
                                     value={endDateStr}
                                     onChange={e => setEndDateStr(e.target.value)}
                                 />
-                                {!isAllDay && (
+                                {scheduleMode === 'timed' && (
                                     <input
                                         type="time"
                                         className="input"

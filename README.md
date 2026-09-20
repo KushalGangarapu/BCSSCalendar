@@ -22,6 +22,7 @@ The system is designed from the ground up to solve a real-world problem: replaci
 * **Four Interactive Views:** Toggle seamlessly between **Month View** (grid layout), **Week View** (detailed weekly columns), **Day View** (time-block scheduler), and **Agenda View** (clean chronological list of cards).
 * **Direct In-Calendar Event Editing (`EditEventModal`):** Administrators can edit any event (past, present, or future) directly from the calendar views or event details modal. Features a full right-side frosted glass backdrop portal.
 * **Smart Multi-Day Event Rendering:** Multi-day events automatically render on their start date, end date, and currently active day, displaying date ranges (`MMM d – MMM d`) inside cell pills while remaining clean on past/future middle days.
+* **Four Schedule Modes with Marker Tags:** Events support four schedule types — **Specific time**, **All Day (8 AM – 5 PM)**, **Observed Day** (school open, e.g. Day of Mourning), and **No School** (closures, e.g. Pro-D Day). Marker tags (`Observed Day`, `No School`) are auto-managed event tags — never club categories — rendering as distinctly colored pills (lime / red) and appearing as dedicated filters in the calendar.
 * **Zero-Horizontal-Scroll Responsive Layout:** Responsive navigation bars and calendar toolbars dynamically adapt to avoid horizontal overflow on all screen resolutions from 320px ultra-compact phones to 4K displays.
 * **Mobile Bottom Sheets:** Modals automatically morph into touch-friendly slide-up bottom sheets (`max-height: 88dvh`, safe-area insets) on mobile viewports.
 * **Print Layouts & Interactive PDF Schedules:** Implements dedicated print styles (`PrintSchedule.tsx`) allowing admins and students to export clean, branded monthly schedules. Recurring series collapse into a single row listing every occurrence date in the month with a human-readable cadence label ("Repeats weekly on Fridays"). All URLs and Markdown links in descriptions compile directly into native, clickable `/URI` hyperlinks inside the exported PDF for instant access to meeting forms and sign-up sheets.
@@ -70,9 +71,9 @@ The system is designed from the ground up to solve a real-world problem: replaci
 
 ### Interactive Club Directory & Featured Showcase
 * **Featured Clubs on Dashboard:** Administrators can toggle featured clubs via a star icon in the admin dashboard to spotlight active organizations on the home page.
-* **Strict Alphabetical Directory:** The Clubs Directory renders clubs in strict alphabetical order (A–Z) with instant keyword search and category filtering.
+* **Strict Alphabetical Directory:** The Clubs Directory renders clubs in strict alphabetical order (A–Z) with instant name-based search and circular single-select category filtering.
 * **Client-Side Persistence:** Students can "follow" clubs, saving preferences locally in the browser's `localStorage` to curate a personalized calendar feed.
-* **Integrated Banner Cropper:** Admin panel includes an interactive 21:9 image cropper (`react-easy-crop`) for club banner uploads.
+* **Integrated Banner Cropper (`ImageCropModal.tsx`):** Admin panel includes an interactive 21:9 image cropper (`react-easy-crop`) for club banner uploads, featuring zoom controls, 90° rotation with proper rotated-canvas extraction (`cropImage.ts`), a live card-style preview, crop reset, and a "Use original" bypass that preserves PNG transparency.
 
 ---
 
@@ -241,6 +242,7 @@ BCSS-Calendar/
     │   │   │   └── PrintSchedule.tsx     # Custom print & PDF schedule generator
     │   │   ├── common/
     │   │   │   ├── DescriptionEditor.tsx # Rich description editor with link modal & live preview
+    │   │   │   ├── ImageCropModal.tsx    # Reusable banner cropper (zoom, rotate, preview, skip)
     │   │   │   └── RichDescription.tsx   # Sanitized markdown & link renderer
     │   │   ├── MobileFilterDropdown.tsx  # Touch-friendly multi-select filter dropdown
     │   │   ├── Navbar.tsx                # Zero-overflow responsive navigation bar

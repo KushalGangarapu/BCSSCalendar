@@ -4,7 +4,7 @@ import { X, Clock, ExternalLink, Calendar, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../../utils/calendarExport';
 import { useAppData } from '../../context/DataContext';
-import { isAllDayEvent } from '../../utils/timeUtils';
+import { isAllDayEvent, isNoSchoolEvent, getTagPillColor } from '../../utils/timeUtils';
 import { RichDescription } from '../common/RichDescription';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -27,6 +27,7 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
 
     const startDt = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
     const endDt = event.endDate ? (typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate)) : null;
+    const allDayLabel = isNoSchoolEvent(event.tags) ? 'No School' : 'All Day';
 
     const recurrenceEndDate = event.recurrenceEndDate || (() => {
         if (!event.recurring || !Array.isArray(allEvents)) return null;
@@ -58,7 +59,7 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px', paddingRight: '24px' }}>
                         {event.tags && event.tags.length > 0 ? (
                             event.tags.map((tag: string) => {
-                                const catColor = categories.find(c => c.name.toLowerCase().trim() === tag.toLowerCase().trim())?.color || 'var(--bcss-red)';
+                                const catColor = getTagPillColor(tag, categories);
                                 return (
                                     <span key={tag} className="pill" style={{
                                         background: catColor,
@@ -123,8 +124,8 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
                         <Clock size={16} style={{ color: categoryColor || 'var(--bcss-red)' }} />
                         {isAllDayEvent(event.date, event.endDate) ? (
                             endDt && !isSameDay(startDt, endDt)
-                                ? `${format(startDt, 'EEEE, MMMM do, yyyy')} – ${format(endDt, 'EEEE, MMMM do, yyyy')} · All Day`
-                                : `${format(startDt, 'EEEE, MMMM do, yyyy')} · All Day`
+                                ? `${format(startDt, 'EEEE, MMMM do, yyyy')} – ${format(endDt, 'EEEE, MMMM do, yyyy')} · ${allDayLabel}`
+                                : `${format(startDt, 'EEEE, MMMM do, yyyy')} · ${allDayLabel}`
                         ) : (
                             <>
                                 {format(startDt, 'EEEE, MMMM do, yyyy · h:mm a')}

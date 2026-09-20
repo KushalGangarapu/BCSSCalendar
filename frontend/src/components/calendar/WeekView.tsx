@@ -87,7 +87,7 @@ export const WeekView = ({
                                             {!isMobile && (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', opacity: 0.95, whiteSpace: 'nowrap', color: '#FFFFFF' }}>
                                                     <Clock size={12} />
-                                                    {formatEventTime(ev.date, ev.endDate)}
+                                                    {formatEventTime(ev.date, ev.endDate, ev.tags)}
                                                 </div>
                                             )}
 

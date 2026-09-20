@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Eye, Calendar, Users, ArrowRight, Heart, Star, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { isEventLive, isAllDayEvent, formatEventTime } from '../utils/timeUtils';
+import { isEventLive, isAllDayEvent, formatEventTime, getTagPillColor } from '../utils/timeUtils';
 import { endOfDay } from 'date-fns';
 import { SkeletonClubCard, SkeletonEventItem } from '../components/Skeleton';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -48,8 +48,7 @@ export const Dashboard = () => {
         if (event.tags && event.tags.length > 0) {
             for (const tag of event.tags) {
                 if (tag.toLowerCase().trim() === 'school event') continue;
-                const matchedColor = getCategoryColor(tag);
-                if (matchedColor) return matchedColor;
+                return getTagPillColor(tag, categories);
             }
         }
         const clubCat = event.club?.category;
@@ -150,7 +149,7 @@ export const Dashboard = () => {
 
                             <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                                 <Clock size={16} style={{ color: 'var(--bcss-red)' }} />
-                                {`${new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${formatEventTime(nextLiveEvent.date, nextLiveEvent.endDate)}`}
+                                {`${new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${formatEventTime(nextLiveEvent.date, nextLiveEvent.endDate, nextLiveEvent.tags)}`}
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
@@ -359,7 +358,7 @@ export const Dashboard = () => {
                                                 )}
                                             </div>
                                             <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                                {formatEventTime(event.date, event.endDate)} · <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{event.club?.name || 'Burnaby Central'}</span>
+                                                {formatEventTime(event.date, event.endDate, event.tags)} · <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{event.club?.name || 'Burnaby Central'}</span>
                                             </div>
                                         </div>
                                     </div>

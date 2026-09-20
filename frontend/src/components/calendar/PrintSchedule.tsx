@@ -1,5 +1,5 @@
 import { format, parseISO, isSameDay } from 'date-fns';
-import { formatEventTime, isAllDayEvent } from '../../utils/timeUtils';
+import { formatEventTime, getTagPillColor } from '../../utils/timeUtils';
 import { RichDescription } from '../common/RichDescription';
 
 interface PrintScheduleProps {
@@ -36,8 +36,8 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
     ].sort((a, b) => a.dates[0].getTime() - b.dates[0].getTime());
 
     const getCategoryColor = (catName: string) => {
-        const matched = categories.find(c => c.name.toLowerCase().trim() === catName.toLowerCase().trim());
-        if (matched) return matched.color;
+        const pillColor = getTagPillColor(catName, categories, '');
+        if (pillColor) return pillColor;
         if (catName.toLowerCase().trim() === 'school event') return '#0F172A';
         return '#D90429';
     };
@@ -97,13 +97,13 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
                                 dateDisplay = sameMonth
                                     ? `${format(uniqueDays[0], 'MMM')} ${uniqueDays.map(d => format(d, 'd')).join(', ')}`
                                     : uniqueDays.map(d => format(d, 'MMM d')).join(', ');
-                                timeDisplay = formatEventTime(startDate, endDate);
+                                timeDisplay = formatEventTime(startDate, endDate, event.tags);
                             } else if (endDate && !isSameDay(startDate, endDate)) {
                                 dateDisplay = `${format(startDate, 'EEE, MMM d')} – ${format(endDate, 'EEE, MMM d')}`;
-                                timeDisplay = isAllDayEvent(startDate, endDate) ? 'All Day' : formatEventTime(startDate, endDate);
+                                timeDisplay = formatEventTime(startDate, endDate, event.tags);
                             } else {
                                 dateDisplay = format(startDate, 'EEE, MMM d');
-                                timeDisplay = formatEventTime(startDate, endDate);
+                                timeDisplay = formatEventTime(startDate, endDate, event.tags);
                             }
 
                             // Collect all distinct tags and category

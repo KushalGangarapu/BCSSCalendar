@@ -115,7 +115,7 @@ export const AgendaView = ({
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                                 <Clock size={13} style={{ color: 'var(--bcss-red)' }} />
-                                                                {formatEventTime(ev.date, ev.endDate)}
+                                                                {formatEventTime(ev.date, ev.endDate, ev.tags)}
                                                             </div>
                                                             <span>&bull;</span>
                                                             <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{ev.club?.name || 'Burnaby Central'}</span>

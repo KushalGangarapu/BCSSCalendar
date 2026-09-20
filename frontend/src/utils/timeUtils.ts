@@ -1,5 +1,31 @@
 import { parseISO, differenceInMinutes, format, isSameDay } from 'date-fns';
 
+// Reserved marker tags auto-managed by the event forms to distinguish holiday types.
+// These are event tags, not categories — they never appear in filter lists.
+export const OBSERVANCE_TAG = 'Observed Day';
+export const NO_SCHOOL_TAG = 'No School';
+// 'Holiday' is the legacy marker written by older versions — kept in the strip list
+// so it gets replaced with 'Observed Day' the next time the event is saved.
+export const MARKER_TAGS = [OBSERVANCE_TAG, NO_SCHOOL_TAG, 'Holiday'];
+
+/**
+ * Resolves the display color for a tag pill. Marker tags get distinct colors
+ * (No School = red, Observed Day = lime green); everything else falls back to
+ * the matching category color, then `fallback`.
+ */
+export const getTagPillColor = (tag: string, categories: { name: string; color: string }[] = [], fallback: string = 'var(--bcss-red)'): string => {
+    const t = tag.trim().toLowerCase();
+    if (t === 'no school') return '#D90429';
+    if (t === 'observed day' || t === 'holiday') return '#65a30d';
+    return categories.find(c => c.name.trim().toLowerCase() === t)?.color || fallback;
+};
+
+/**
+ * Checks if an event is a school closure (marked with the "No School" tag).
+ */
+export const isNoSchoolEvent = (tags?: string[] | null): boolean =>
+    !!tags?.some(t => t.trim().toLowerCase() === 'no school');
+
 /**
  * Checks if an event is an all-day event (start time is midnight and no specific timed end).
  */
@@ -23,21 +49,24 @@ export const isAllDayEvent = (date: string | Date, endDate?: string | Date | nul
 
 /**
  * Formats event time cleanly for calendar lists and cards:
+ * - "No School" or "No School (Sep 21 – Sep 23)" for school closures
  * - "All Day" or "All Day (Sep 21 – Sep 23)" for all-day events
  * - "3:00 PM" or "3:00 PM – 4:00 PM" for timed events
  */
-export const formatEventTime = (date: string | Date, endDate?: string | Date | null): string => {
+export const formatEventTime = (date: string | Date, endDate?: string | Date | null, tags?: string[] | null): string => {
     const start = typeof date === 'string' ? parseISO(date) : date;
     if (isNaN(start.getTime())) return '';
+
+    const allDayLabel = isNoSchoolEvent(tags) ? 'No School' : 'All Day';
 
     if (isAllDayEvent(start, endDate)) {
         if (endDate) {
             const end = typeof endDate === 'string' ? parseISO(endDate) : endDate;
             if (!isNaN(end.getTime()) && !isSameDay(start, end)) {
-                return `All Day (${format(start, 'MMM d')} – ${format(end, 'MMM d')})`;
+                return `${allDayLabel} (${format(start, 'MMM d')} – ${format(end, 'MMM d')})`;
             }
         }
-        return 'All Day';
+        return allDayLabel;
     }
 
     const startStr = format(start, 'h:mm a');

@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Calendar as CalIcon, LogOut, Trash2, Edit3, X, Users, Tag, ImagePlus, Loader2, Crop, Star } from 'lucide-react';
+import { PlusCircle, Calendar as CalIcon, LogOut, Trash2, Edit3, X, Users, Tag, ImagePlus, Loader2, Star } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { Helmet } from 'react-helmet-async';
-import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
+import { ImageCropModal } from '../components/common/ImageCropModal';
 import { invalidateCache } from '../utils/apiCache';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
 import type { ClubItem } from '../context/DataContext';
 import { filterRecurringEvents } from '../utils/recurringUtils';
 import { DescriptionEditor } from '../components/common/DescriptionEditor';
+import { OBSERVANCE_TAG, NO_SCHOOL_TAG, MARKER_TAGS, formatEventTime, getTagPillColor } from '../utils/timeUtils';
 
 type Club = ClubItem;
 
 type Tab = 'events' | 'clubs';
+
+type ScheduleMode = 'timed' | 'allDay' | 'observance' | 'holiday';
 
 const useIsMobile = () => {
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -36,7 +38,7 @@ export const AdminDashboard = () => {
     // Event form state
     const [title, setTitle] = useState('');
     const [date, setDate] = useState('');
-    const [hasTime, setHasTime] = useState(true);
+    const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('timed');
     const [time, setTime] = useState('15:00');
     const [hasEndDate, setHasEndDate] = useState(false);
     const [endDate, setEndDate] = useState('');
@@ -63,9 +65,7 @@ export const AdminDashboard = () => {
 
     // Cropper State
     const [cropFileUrl, setCropFileUrl] = useState<string | null>(null);
-    const [crop, setCrop] = useState({ x: 0, y: 0 });
-    const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+    const [cropFile, setCropFile] = useState<File | null>(null);
 
     const [submitting, setSubmitting] = useState(false);
     const navigate = useNavigate();
@@ -94,16 +94,30 @@ export const AdminDashboard = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const dt = hasTime ? new Date(`${date}T${time}:00`) : new Date(`${date}T00:00:00`);
+            let dt: Date;
             let endDt: Date | null = null;
-            if (hasEndDate) {
-                const targetEndDate = endDate || date;
-                if (hasEndTime && endTime) {
-                    endDt = new Date(`${targetEndDate}T${endTime}:00`);
-                } else {
+            const targetEndDate = endDate || date;
+
+            if (scheduleMode === 'timed') {
+                dt = new Date(`${date}T${time}:00`);
+                if (hasEndDate) {
+                    endDt = hasEndTime && endTime
+                        ? new Date(`${targetEndDate}T${endTime}:00`)
+                        : new Date(`${targetEndDate}T23:59:59`);
+                }
+            } else if (scheduleMode === 'allDay') {
+                dt = new Date(`${date}T08:00:00`);
+                endDt = new Date(`${targetEndDate}T17:00:00`);
+            } else {
+                dt = new Date(`${date}T00:00:00`);
+                if (hasEndDate) {
                     endDt = new Date(`${targetEndDate}T23:59:59`);
                 }
             }
+
+            const finalTags = eventTags.filter(t => !MARKER_TAGS.includes(t));
+            if (scheduleMode === 'observance') finalTags.push(OBSERVANCE_TAG);
+            if (scheduleMode === 'holiday') finalTags.push(NO_SCHOOL_TAG);
 
             let url = `${import.meta.env.VITE_API_URL}/api/events`;
             let method = 'POST';
@@ -127,7 +141,7 @@ export const AdminDashboard = () => {
                     description: description || null, 
                     clubId: clubId || null, 
                     recurring: recurring || null, 
-                    tags: eventTags 
+                    tags: finalTags 
                 }),
             });
             if (r.ok) {
@@ -269,12 +283,18 @@ export const AdminDashboard = () => {
 
         const hours = d.getHours();
         const minutes = d.getMinutes();
+        const ed = event.endDate ? new Date(event.endDate) : null;
+
+        let detectedMode: ScheduleMode;
         if (hours === 0 && minutes === 0) {
-            setHasTime(false);
+            detectedMode = (event.tags || []).some((t: string) => t.trim().toLowerCase() === 'no school') ? 'holiday' : 'observance';
+        } else if (hours === 8 && minutes === 0 && ed && ed.getHours() === 17 && ed.getMinutes() === 0) {
+            detectedMode = 'allDay';
         } else {
-            setHasTime(true);
+            detectedMode = 'timed';
             setTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
         }
+        setScheduleMode(detectedMode);
 
         // For recurring events, determine the series cutoff date (Repeat Until Date)
         if (event.recurring) {
@@ -295,8 +315,7 @@ export const AdminDashboard = () => {
             setRecurrenceEndDate('');
         }
 
-        if (event.endDate) {
-            const ed = new Date(event.endDate);
+        if (ed) {
             const eYyyy = ed.getFullYear();
             const eMm = String(ed.getMonth() + 1).padStart(2, '0');
             const eDd = String(ed.getDate()).padStart(2, '0');
@@ -311,16 +330,27 @@ export const AdminDashboard = () => {
                 setEndTime(`${String(eHours).padStart(2, '0')}:${String(eMinutes).padStart(2, '0')}`);
             }
 
-            // Only mark multi-day or custom end time if it spans across different days or has a non-midnight/non-eod end time
-            if (!event.recurring && (endDateString !== startDateString || (eHours !== 0 && (eHours !== 23 || eMinutes !== 59)))) {
-                setEndDate(endDateString);
-                setHasEndDate(true);
-            } else if (event.recurring && (eHours !== 0 && (eHours !== 23 || eMinutes !== 59))) {
-                setEndDate(endDateString);
-                setHasEndDate(true);
+            const sameDay = endDateString === startDateString;
+            const hasSpecificEndTime = eHours !== 0 && (eHours !== 23 || eMinutes !== 59);
+
+            if (detectedMode === 'timed') {
+                // Only mark multi-day or custom end time if it spans across different days or has a non-midnight/non-eod end time
+                if ((!event.recurring && (!sameDay || hasSpecificEndTime)) || (event.recurring && hasSpecificEndTime)) {
+                    setEndDate(endDateString);
+                    setHasEndDate(true);
+                } else {
+                    setHasEndDate(false);
+                    setEndDate('');
+                }
             } else {
-                setHasEndDate(false);
-                setEndDate('');
+                // Non-timed modes: the same-day end (17:00 / 23:59) is implicit — only multi-day shows the end date field
+                if (!sameDay) {
+                    setEndDate(endDateString);
+                    setHasEndDate(true);
+                } else {
+                    setHasEndDate(false);
+                    setEndDate('');
+                }
             }
         } else {
             setHasEndDate(false);
@@ -339,7 +369,7 @@ export const AdminDashboard = () => {
         setRecurrenceEndDate('');
         setEventTags([]);
         setDate('');
-        setHasTime(true);
+        setScheduleMode('timed');
         setTime('15:00');
         setHasEndDate(false);
         setEndDate('');
@@ -363,30 +393,42 @@ export const AdminDashboard = () => {
         setClubName(''); setClubCategory(''); setClubDesc('');
         setClubInsta(''); setClubDiscord(''); setCustomCategory(''); setClubImageUrl('');
         setClubIsFeatured(false);
-        setCropFileUrl(null);
+        closeCropModal();
     };
 
     const handleFileSelect = (file: File) => {
-        const url = URL.createObjectURL(file);
-        setCropFileUrl(url);
+        if (cropFileUrl) URL.revokeObjectURL(cropFileUrl);
+        setCropFile(file);
+        setCropFileUrl(URL.createObjectURL(file));
     };
 
-    const handleConfirmCrop = async () => {
+    const closeCropModal = () => {
+        if (cropFileUrl) URL.revokeObjectURL(cropFileUrl);
+        setCropFileUrl(null);
+        setCropFile(null);
+    };
+
+    const handleConfirmCrop = async (croppedAreaPixels: { x: number; y: number; width: number; height: number }, rotation: number) => {
         if (!cropFileUrl || !croppedAreaPixels) return;
 
         try {
             setUploading(true);
-            const croppedFile = await getCroppedImg(cropFileUrl, croppedAreaPixels);
+            const croppedFile = await getCroppedImg(cropFileUrl, croppedAreaPixels, rotation);
             if (!croppedFile) throw new Error('Failed to crop image');
 
-            URL.revokeObjectURL(cropFileUrl);
-            setCropFileUrl(null);
-
+            closeCropModal();
             await handleImageUpload(croppedFile);
-        } catch (e) {
+        } catch {
             toast('Failed to crop image', 'error');
             setUploading(false);
         }
+    };
+
+    const handleUseOriginal = async () => {
+        if (!cropFile) return;
+        const file = cropFile;
+        closeCropModal();
+        await handleImageUpload(file);
     };
 
     const handleImageUpload = async (file: File) => {
@@ -408,7 +450,7 @@ export const AdminDashboard = () => {
             } else {
                 toast(`Upload failed: ${data.error?.message || 'Unknown error'}`, 'error');
             }
-        } catch (err) {
+        } catch {
             toast('Upload error', 'error');
         } finally {
             setUploading(false);
@@ -493,22 +535,27 @@ export const AdminDashboard = () => {
                                 </select>
                             </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, minmax(0, 1fr))', gap: '20px' }}>
                             <div><label className="label">Date *</label><input required type="date" className="input" value={date} onChange={e => setDate(e.target.value)} /></div>
                             <div>
-                                <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    Time
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600, textTransform: 'none', letterSpacing: 0, color: 'var(--text-muted)' }}>
-                                        <input type="checkbox" checked={hasTime} onChange={e => setHasTime(e.target.checked)} style={{ accentColor: 'var(--bcss-red)', width: '14px', height: '14px' }} />
-                                        Specific time
-                                    </label>
-                                </label>
-                                {hasTime ? (
+                                <label className="label">Schedule</label>
+                                <select className="input" value={scheduleMode} onChange={e => setScheduleMode(e.target.value as ScheduleMode)}>
+                                    <option value="timed">Specific time</option>
+                                    <option value="allDay">All Day (8 AM – 5 PM)</option>
+                                    <option value="observance">Observed Day (school open)</option>
+                                    <option value="holiday">No School (holiday)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="label">Time</label>
+                                {scheduleMode === 'timed' ? (
                                     <select className="input" value={time} onChange={e => setTime(e.target.value)}>
                                         {timeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                                     </select>
                                 ) : (
-                                    <div className="input" style={{ color: 'var(--text-muted)', cursor: 'default' }}>All Day Event</div>
+                                    <div className="input" style={{ color: 'var(--text-muted)', cursor: 'default', background: 'var(--bg-secondary)' }}>
+                                        {scheduleMode === 'allDay' ? '8:00 AM – 5:00 PM' : scheduleMode === 'holiday' ? 'All day · no school' : 'All day · school open'}
+                                    </div>
                                 )}
                             </div>
                             <div><label className="label">Recurrence</label>
@@ -540,29 +587,31 @@ export const AdminDashboard = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                 <input type="checkbox" checked={hasEndDate} onChange={e => setHasEndDate(e.target.checked)} style={{ accentColor: 'var(--bcss-red)', width: '16px', height: '16px' }} />
-                                Multi-day or specify end time
+                                {scheduleMode === 'timed' ? 'Multi-day or specify end time' : 'Multi-day event'}
                             </label>
                         </div>
 
                         {hasEndDate && (
-                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px', animation: 'fadeUp 0.2s ease both' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: (isMobile || scheduleMode !== 'timed') ? '1fr' : '1fr 1fr', gap: '20px', animation: 'fadeUp 0.2s ease both' }}>
                                 <div><label className="label">End Date</label><input required type="date" className="input" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
-                                <div>
-                                    <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        End Time
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600, textTransform: 'none', letterSpacing: 0, color: 'var(--text-muted)' }}>
-                                            <input type="checkbox" checked={hasEndTime} onChange={e => setHasEndTime(e.target.checked)} style={{ accentColor: 'var(--bcss-red)', width: '14px', height: '14px' }} />
-                                            Specific time
+                                {scheduleMode === 'timed' && (
+                                    <div>
+                                        <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            End Time
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600, textTransform: 'none', letterSpacing: 0, color: 'var(--text-muted)' }}>
+                                                <input type="checkbox" checked={hasEndTime} onChange={e => setHasEndTime(e.target.checked)} style={{ accentColor: 'var(--bcss-red)', width: '14px', height: '14px' }} />
+                                                Specific time
+                                            </label>
                                         </label>
-                                    </label>
-                                    {hasEndTime ? (
-                                        <select className="input" value={endTime} onChange={e => setEndTime(e.target.value)}>
-                                            {timeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                        </select>
-                                    ) : (
-                                        <div className="input" style={{ color: 'var(--text-muted)', cursor: 'default' }}>End of Day</div>
-                                    )}
-                                </div>
+                                        {hasEndTime ? (
+                                            <select className="input" value={endTime} onChange={e => setEndTime(e.target.value)}>
+                                                {timeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                            </select>
+                                        ) : (
+                                            <div className="input" style={{ color: 'var(--text-muted)', cursor: 'default' }}>End of Day</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -624,11 +673,14 @@ export const AdminDashboard = () => {
 
                             if (event.tags && event.tags.length > 0) {
                                 for (const tag of event.tags) {
+                                    if (tag.toLowerCase().trim() === 'school event') continue;
                                     const tagMatched = categories.find(c => c.name === tag);
                                     if (tagMatched) return tagMatched.color;
+                                    const markerColor = getTagPillColor(tag, categories, '');
+                                    if (markerColor) return markerColor;
                                 }
                             }
-                            return 'var(--bcss-red)';
+                            return '#0F172A';
                         };
 
                         return (
@@ -662,7 +714,7 @@ export const AdminDashboard = () => {
                                                         {event.tags && event.tags.length > 0 && (
                                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                                 {event.tags.map((t: string) => {
-                                                                    const tagColor = categories.find(c => c.name.toLowerCase().trim() === t.toLowerCase().trim())?.color || 'var(--bcss-red)';
+                                                                    const tagColor = getTagPillColor(t, categories);
                                                                     return (
                                                                         <span key={t} style={{
                                                                             fontSize: '0.68rem',
@@ -681,7 +733,7 @@ export const AdminDashboard = () => {
                                                         )}
                                                     </div>
                                                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-word' }}>
-                                                        {d.toLocaleDateString()} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{event.endDate ? ` – ${new Date(event.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''} · <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{event.club?.name || 'Burnaby Central'}</span>
+                                                        {d.toLocaleDateString()} · {formatEventTime(event.date, event.endDate, event.tags)} · <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{event.club?.name || 'Burnaby Central'}</span>
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '6px' }}>
@@ -810,62 +862,15 @@ export const AdminDashboard = () => {
                         </form>
                     </div>
 
-                    {/* Crop Modal Portal */}
-                    {cropFileUrl && createPortal(
-                        <div className="modal-overlay" style={{ 
-                            position: 'fixed',
-                            top: 0, bottom: 0, left: 0, right: 0,
-                            zIndex: 9999, 
-                            background: 'rgba(10, 14, 26, 0.88)', 
-                            backdropFilter: 'blur(12px)',
-                            WebkitBackdropFilter: 'blur(12px)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '20px'
-                        }}>
-                            <div className="modal" style={{ width: '100%', maxWidth: '620px', padding: isMobile ? '20px 16px calc(env(safe-area-inset-bottom, 0px) + 20px)' : '28px', background: '#FFFFFF', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                    <h3 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}>
-                                        <Crop size={22} style={{ color: 'var(--bcss-red)' }} /> Crop Banner Photo
-                                    </h3>
-                                    <button onClick={() => { URL.revokeObjectURL(cropFileUrl); setCropFileUrl(null); }} className="btn btn-ghost" style={{ padding: '8px' }}>
-                                        <X size={20} />
-                                    </button>
-                                </div>
-
-                                <div style={{ position: 'relative', width: '100%', height: 'min(360px, 45dvh)', background: '#0F172A', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                                    <Cropper
-                                        image={cropFileUrl}
-                                        crop={crop}
-                                        zoom={zoom}
-                                        aspect={21 / 9}
-                                        onCropChange={setCrop}
-                                        onZoomChange={setZoom}
-                                        onCropComplete={(_, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
-                                    />
-                                </div>
-
-                                <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                    <label style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Zoom Scale</label>
-                                    <input
-                                        type="range"
-                                        value={zoom}
-                                        min={1} max={3} step={0.1}
-                                        onChange={(e) => setZoom(Number(e.target.value))}
-                                        style={{ flex: 1, accentColor: 'var(--bcss-red)' }}
-                                    />
-                                </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-                                    <button onClick={() => { URL.revokeObjectURL(cropFileUrl); setCropFileUrl(null); }} className="btn btn-outline">Cancel</button>
-                                    <button onClick={handleConfirmCrop} disabled={uploading} className="btn btn-red" style={{ gap: '8px' }}>
-                                        {uploading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : 'Crop & Upload'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>,
-                        document.body
+                    {/* Crop Modal */}
+                    {cropFileUrl && (
+                        <ImageCropModal
+                            imageUrl={cropFileUrl}
+                            uploading={uploading}
+                            onCancel={closeCropModal}
+                            onConfirm={handleConfirmCrop}
+                            onUseOriginal={handleUseOriginal}
+                        />
                     )}
 
                     {/* Content Lists */}

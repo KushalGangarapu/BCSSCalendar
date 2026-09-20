@@ -6,7 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../utils/calendarExport';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
-import { formatEventTime } from '../utils/timeUtils';
+import { formatEventTime, getTagPillColor } from '../utils/timeUtils';
 import { RichDescription } from '../components/common/RichDescription';
 
 export const EventPage = () => {
@@ -95,7 +95,7 @@ export const EventPage = () => {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '18px' }}>
                         {event.tags && event.tags.length > 0 ? (
                             event.tags.map((tag: string) => {
-                                const catColor = categories.find(c => c.name.toLowerCase().trim() === tag.toLowerCase().trim())?.color || '#0F172A';
+                                const catColor = getTagPillColor(tag, categories, '#0F172A');
                                 return (
                                     <span key={tag} className="pill" style={{
                                         fontSize: '0.8rem',
@@ -147,7 +147,7 @@ export const EventPage = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
                                 <Clock size={20} style={{ color: 'var(--bcss-blue)' }} />
                                 <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                                    {formatEventTime(event.date, event.endDate)}
+                                    {formatEventTime(event.date, event.endDate, event.tags)}
                                 </span>
                             </div>
                             {event.club && (

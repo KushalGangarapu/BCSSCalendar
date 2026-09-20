@@ -17,6 +17,7 @@ import { PrintSchedule } from '../components/calendar/PrintSchedule';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData, type EventItem } from '../context/DataContext';
 import { filterRecurringEvents } from '../utils/recurringUtils';
+import { OBSERVANCE_TAG, NO_SCHOOL_TAG, getTagPillColor } from '../utils/timeUtils';
 
 interface Event {
     id: string; title: string; date: string; endDate?: string | null; description?: string;
@@ -109,7 +110,8 @@ export const MasterCalendar = () => {
         if (selectedCategories.length === 0) {
             categoryMatch = true;
         } else {
-            const hasMatchingTag = ev.tags && ev.tags.some(tag => selectedCategories.includes(tag));
+            const normalizedTags = (ev.tags || []).map(t => t.trim().toLowerCase() === 'holiday' ? OBSERVANCE_TAG : t);
+            const hasMatchingTag = normalizedTags.some(tag => selectedCategories.includes(tag));
             const hasMatchingClubCategory = ev.club?.category && selectedCategories.includes(ev.club.category);
             categoryMatch = Boolean(hasMatchingTag || hasMatchingClubCategory);
         }
@@ -122,13 +124,13 @@ export const MasterCalendar = () => {
     const resolveEventStyle = (ev: Event) => {
         let primaryColor = null;
 
-        // 1. If event has tags, match to the category color
+        // 1. If event has tags, match to the category color (marker tags get their own colors)
         if (ev.tags && ev.tags.length > 0) {
             for (const tag of ev.tags) {
                 if (tag.toLowerCase().trim() === 'school event') continue;
-                const matchedCategory = categories.find(c => c.name.toLowerCase().trim() === tag.toLowerCase().trim());
-                if (matchedCategory) {
-                    primaryColor = matchedCategory.color;
+                const color = getTagPillColor(tag, categories, '');
+                if (color) {
+                    primaryColor = color;
                     break;
                 }
             }
@@ -155,9 +157,16 @@ export const MasterCalendar = () => {
         }
     };
 
+    // Schedule marker filters — these are event tags, not categories
+    const markerFilters = [
+        { name: NO_SCHOOL_TAG, color: getTagPillColor(NO_SCHOOL_TAG, categories) },
+        { name: OBSERVANCE_TAG, color: getTagPillColor(OBSERVANCE_TAG, categories) },
+    ];
+
     const filterOptions = [
         { name: 'Followed Clubs', selected: followedOnly },
         ...categories.map(cat => ({ name: cat.name, color: cat.color, selected: selectedCategories.includes(cat.name) })),
+        ...markerFilters.map(m => ({ name: m.name, color: m.color, selected: selectedCategories.includes(m.name) })),
     ];
 
     const handleFilterToggle = (name: string) => {
@@ -248,6 +257,41 @@ export const MasterCalendar = () => {
                                                 }} />
                                             )}
                                             {cat.name}
+                                        </button>
+                                    );
+                                })}
+                                <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
+                                {markerFilters.map(m => {
+                                    const isSelected = selectedCategories.includes(m.name);
+                                    return (
+                                        <button
+                                            key={m.name}
+                                            onClick={() => toggleCategory(m.name)}
+                                            className={`pill ${isSelected ? 'pill-red' : 'pill-dark'}`}
+                                            style={{
+                                                cursor: 'pointer',
+                                                padding: '7px 16px',
+                                                fontSize: '0.78rem',
+                                                transition: 'all 0.2s ease',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                background: isSelected ? m.color : undefined,
+                                                borderColor: isSelected ? 'transparent' : undefined,
+                                                color: isSelected ? '#fff' : undefined,
+                                            }}
+                                        >
+                                            {!isSelected && (
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    width: '8px',
+                                                    height: '8px',
+                                                    borderRadius: '50%',
+                                                    background: m.color,
+                                                    flexShrink: 0
+                                                }} />
+                                            )}
+                                            {m.name}
                                         </button>
                                     );
                                 })}

@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Heart, Filter, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { Search, Heart, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { SkeletonClubCard } from '../components/Skeleton';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
+import { MARKER_TAGS } from '../utils/timeUtils';
 
 export const ClubsDirectory = () => {
     usePageTitle('Clubs Directory');
@@ -53,8 +54,7 @@ export const ClubsDirectory = () => {
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
         .filter(club => {
             const matchesCategory = activeCategory === 'All' || club.category === activeCategory;
-            const matchesSearch = club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (club.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = club.name.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesCategory && matchesSearch;
         });
 
@@ -83,7 +83,7 @@ export const ClubsDirectory = () => {
                         <input
                             className="input"
                             type="text"
-                            placeholder="Search by club name or keyword..."
+                            placeholder="Search by club name..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             style={{ paddingLeft: '44px', height: '42px' }}
@@ -168,7 +168,7 @@ export const ClubsDirectory = () => {
                                     <div style={{
                                         width: '18px',
                                         height: '18px',
-                                        borderRadius: '4px',
+                                        borderRadius: '50%',
                                         border: activeCategory === 'All' ? 'none' : '1.5px solid #CBD5E1',
                                         background: activeCategory === 'All' ? 'var(--bcss-red)' : '#FFFFFF',
                                         display: 'flex',
@@ -177,13 +177,13 @@ export const ClubsDirectory = () => {
                                         flexShrink: 0,
                                         transition: 'all 0.15s ease',
                                     }}>
-                                        {activeCategory === 'All' && <Check size={12} strokeWidth={3.5} color="#FFFFFF" />}
+                                        {activeCategory === 'All' && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FFFFFF' }} />}
                                     </div>
                                     <span>All</span>
                                 </div>
 
-                                {/* Category Options */}
-                                {categories.map(cat => {
+                                {/* Category Options (reserved event marker names never describe clubs) */}
+                                {categories.filter(cat => !MARKER_TAGS.includes(cat.name)).map(cat => {
                                     const isSelected = activeCategory === cat.name;
                                     return (
                                         <div
@@ -211,7 +211,7 @@ export const ClubsDirectory = () => {
                                             <div style={{
                                                 width: '18px',
                                                 height: '18px',
-                                                borderRadius: '4px',
+                                                borderRadius: '50%',
                                                 border: isSelected ? 'none' : '1.5px solid #CBD5E1',
                                                 background: isSelected ? 'var(--bcss-red)' : '#FFFFFF',
                                                 display: 'flex',
@@ -220,7 +220,7 @@ export const ClubsDirectory = () => {
                                                 flexShrink: 0,
                                                 transition: 'all 0.15s ease',
                                             }}>
-                                                {isSelected && <Check size={12} strokeWidth={3.5} color="#FFFFFF" />}
+                                                {isSelected && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FFFFFF' }} />}
                                             </div>
                                             <span>{cat.name}</span>
                                         </div>
@@ -363,7 +363,7 @@ export const ClubsDirectory = () => {
                             No clubs found
                         </h3>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-                            Try searching for another keyword or selecting a different category filter.
+                            Try a different name or category filter.
                         </p>
                     </div>
                 )}
