@@ -1,5 +1,4 @@
-import { endOfDay } from 'date-fns';
-import { isAllDayEvent } from './timeUtils';
+import { isAllDayEvent, endOfSchoolDay } from './timeUtils';
 
 export interface BaseEvent {
     id: string;
@@ -39,8 +38,8 @@ export function filterRecurringEvents<T extends BaseEvent>(events: T[]): T[] {
         const evStart = typeof ev.date === 'string' ? new Date(ev.date) : (ev.date instanceof Date ? ev.date : new Date());
         const evEnd = ev.endDate ? (typeof ev.endDate === 'string' ? new Date(ev.endDate) : (ev.endDate instanceof Date ? ev.endDate : evStart)) : evStart;
 
-        // All-day events without an end date run until end of that day
-        const effectiveEnd = !ev.endDate && isAllDayEvent(evStart, null) ? endOfDay(evStart) : evEnd;
+        // All-day events without an end date run until end of that school day
+        const effectiveEnd = !ev.endDate && isAllDayEvent(evStart, null) ? endOfSchoolDay(evStart) : evEnd;
         const isPast = effectiveEnd < now && evStart < oneHourAgo;
 
         if (isPast) {

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { format, parseISO, isSameDay } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { X, Clock, ExternalLink, Calendar, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../../utils/calendarExport';
 import { useAppData } from '../../context/DataContext';
-import { isAllDayEvent, isNoSchoolEvent, getTagPillColor } from '../../utils/timeUtils';
+import { isAllDayEvent, isNoSchoolEvent, getTagPillColor, toSchoolTime } from '../../utils/timeUtils';
 import { RichDescription } from '../common/RichDescription';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -25,8 +25,8 @@ export const EventDetailModal = ({ event, onClose, categories = [], categoryColo
 
     if (!event) return null;
 
-    const startDt = typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date);
-    const endDt = event.endDate ? (typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate)) : null;
+    const startDt = toSchoolTime(event.date);
+    const endDt = event.endDate ? toSchoolTime(event.endDate) : null;
     const allDayLabel = isNoSchoolEvent(event.tags) ? 'No School' : 'All Day';
 
     const recurrenceEndDate = event.recurrenceEndDate || (() => {

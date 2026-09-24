@@ -17,7 +17,7 @@ import { PrintSchedule } from '../components/calendar/PrintSchedule';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData, type EventItem } from '../context/DataContext';
 import { filterRecurringEvents } from '../utils/recurringUtils';
-import { OBSERVANCE_TAG, NO_SCHOOL_TAG, getTagPillColor } from '../utils/timeUtils';
+import { OBSERVANCE_TAG, NO_SCHOOL_TAG, getTagPillColor, toSchoolTime } from '../utils/timeUtils';
 
 interface Event {
     id: string; title: string; date: string; endDate?: string | null; description?: string;
@@ -50,7 +50,7 @@ export const MasterCalendar = () => {
     const { events, clubs, categories, deleteOptimisticEvent, refreshData, loading } = useAppData();
 
     const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
-    const [month, setMonth] = useState(new Date());
+    const [month, setMonth] = useState(() => toSchoolTime(new Date()));
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [hovered, setHovered] = useState<Event | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -447,7 +447,7 @@ export const MasterCalendar = () => {
                         </button>
 
                         <button 
-                            onClick={() => setMonth(new Date())} 
+                            onClick={() => setMonth(toSchoolTime(new Date()))} 
                             className="btn btn-outline" 
                             style={{ 
                                 height: isMobile ? '30px' : '34px', 

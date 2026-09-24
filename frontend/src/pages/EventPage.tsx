@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, Tag, ChevronDown, Sparkles } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Helmet } from 'react-helmet-async';
 import { generateGoogleCalendarUrl, getAppleCalendarUrl } from '../utils/calendarExport';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
-import { formatEventTime, getTagPillColor } from '../utils/timeUtils';
+import { formatEventTime, getTagPillColor, toSchoolTime } from '../utils/timeUtils';
 import { RichDescription } from '../components/common/RichDescription';
 
 export const EventPage = () => {
@@ -142,7 +142,7 @@ export const EventPage = () => {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
                                 <Calendar size={20} style={{ color: 'var(--bcss-blue)' }} />
-                                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{format(typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date), 'EEEE, MMMM do, yyyy')}</span>
+                                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{format(toSchoolTime(event.date), 'EEEE, MMMM do, yyyy')}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
                                 <Clock size={20} style={{ color: 'var(--bcss-blue)' }} />

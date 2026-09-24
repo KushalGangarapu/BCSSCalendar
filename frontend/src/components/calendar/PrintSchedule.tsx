@@ -1,5 +1,5 @@
 import { format, parseISO, isSameDay } from 'date-fns';
-import { formatEventTime, getTagPillColor } from '../../utils/timeUtils';
+import { formatEventTime, getTagPillColor, toSchoolTime } from '../../utils/timeUtils';
 import { RichDescription } from '../common/RichDescription';
 
 interface PrintScheduleProps {
@@ -9,7 +9,9 @@ interface PrintScheduleProps {
 }
 
 export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleProps) => {
-    const toDate = (d: string | Date) => (typeof d === 'string' ? parseISO(d) : d);
+    // Dates are converted to school wall-clock so all format() calls below
+    // produce Vancouver labels regardless of the viewer's device timezone
+    const toDate = (d: string | Date) => toSchoolTime(d);
 
     // Sort events by date ascending
     const sorted = [...events].sort(
@@ -97,13 +99,13 @@ export const PrintSchedule = ({ events, title, categories = [] }: PrintScheduleP
                                 dateDisplay = sameMonth
                                     ? `${format(uniqueDays[0], 'MMM')} ${uniqueDays.map(d => format(d, 'd')).join(', ')}`
                                     : uniqueDays.map(d => format(d, 'MMM d')).join(', ');
-                                timeDisplay = formatEventTime(startDate, endDate, event.tags);
+                                timeDisplay = formatEventTime(event.date, event.endDate, event.tags);
                             } else if (endDate && !isSameDay(startDate, endDate)) {
                                 dateDisplay = `${format(startDate, 'EEE, MMM d')} – ${format(endDate, 'EEE, MMM d')}`;
-                                timeDisplay = formatEventTime(startDate, endDate, event.tags);
+                                timeDisplay = formatEventTime(event.date, event.endDate, event.tags);
                             } else {
                                 dateDisplay = format(startDate, 'EEE, MMM d');
-                                timeDisplay = formatEventTime(startDate, endDate, event.tags);
+                                timeDisplay = formatEventTime(event.date, event.endDate, event.tags);
                             }
 
                             // Collect all distinct tags and category

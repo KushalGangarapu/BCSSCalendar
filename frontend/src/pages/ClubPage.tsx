@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Users, Calendar, ArrowLeft, ExternalLink, MessageSquare, Heart, Sparkles } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Helmet } from 'react-helmet-async';
 import { SkeletonClubDetail } from '../components/Skeleton';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAppData } from '../context/DataContext';
-import { isAllDayEvent, isNoSchoolEvent } from '../utils/timeUtils';
+import { isAllDayEvent, isNoSchoolEvent, toSchoolTime } from '../utils/timeUtils';
 
 export const ClubPage = () => {
     const params = useParams();
@@ -256,9 +256,9 @@ export const ClubPage = () => {
                                             <div>
                                                 <div style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '4px', color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>{ev.title}</div>
                                                 <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-                                                    {isAllDayEvent(ev.date, ev.endDate) 
-                                                        ? `${format(parseISO(ev.date), 'EEEE, MMM do')} • ${isNoSchoolEvent(ev.tags) ? 'No School' : 'All Day'}` 
-                                                        : `${format(parseISO(ev.date), 'EEEE, MMM do • h:mm a')}${ev.endDate ? ` – ${format(parseISO(ev.endDate), 'h:mm a')}` : ''}`
+                                                    {isAllDayEvent(ev.date, ev.endDate)
+                                                        ? `${format(toSchoolTime(ev.date), 'EEEE, MMM do')} • ${isNoSchoolEvent(ev.tags) ? 'No School' : 'All Day'}`
+                                                        : `${format(toSchoolTime(ev.date), 'EEEE, MMM do • h:mm a')}${ev.endDate ? ` – ${format(toSchoolTime(ev.endDate), 'h:mm a')}` : ''}`
                                                     }
                                                 </div>
                                             </div>

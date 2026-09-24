@@ -2,6 +2,35 @@ import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { clearCache, getCache, setCache } from '../utils/cache';
 
+// Recurring series are identified the same way as in eventsController cascade
+// edits and the frontend's filterRecurringEvents: title + clubId + cadence.
+const seriesKey = (e: { title: string; clubId: string | null; recurring: string | null }) =>
+    `${e.title.trim().toLowerCase()}|${e.clubId ?? 'none'}|${e.recurring}`;
+
+// Counts upcoming events with each recurring series counting once, so a weekly
+// series with 40 future occurrences reads as 1 — matching the deduplicated
+// list views on the frontend.
+const countDistinctSeries = <T extends { title: string; clubId: string | null; recurring: string | null }>(events: T[]): number => {
+    const seenSeries = new Set<string>();
+    let count = 0;
+    for (const e of events) {
+        if (!e.recurring) { count++; continue; }
+        const key = seriesKey(e);
+        if (!seenSeries.has(key)) { seenSeries.add(key); count++; }
+    }
+    return count;
+};
+
+const countUpcomingEvents = async (now: Date): Promise<number> => {
+    const upcoming = await prisma.event.findMany({
+        where: {
+            OR: [{ date: { gte: now } }, { endDate: { gte: now } }],
+        },
+        select: { title: true, clubId: true, recurring: true },
+    });
+    return countDistinctSeries(upcoming);
+};
+
 export const getClubs = async (req: Request, res: Response) => {
     try {
         const cached = getCache('clubs');
@@ -218,14 +247,7 @@ export const getMetrics = async (req: Request, res: Response) => {
         const metrics = await prisma.metrics.findFirst();
         const clubCount = await prisma.club.count();
         const now = new Date();
-        const eventCount = await prisma.event.count({
-            where: {
-                OR: [
-                    { date: { gte: now } },
-                    { endDate: { gte: now } },
-                ],
-            },
-        });
+        const eventCount = await countUpcomingEvents(now);
         const result = {
             pageVisits: metrics?.activeUsers || 0,
             clubCount,
@@ -291,14 +313,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
             Promise.all([
                 prisma.metrics.findFirst(),
                 prisma.club.count(),
-                prisma.event.count({
-                    where: {
-                        OR: [
-                            { date: { gte: today } },
-                            { endDate: { gte: today } },
-                        ],
-                    },
-                }),
+                countUpcomingEvents(today),
             ]).then(([m, cc, ec]) => ({
                 pageVisits: m?.activeUsers || 0,
                 clubCount: cc,
@@ -348,18 +363,18 @@ export const getDashboardData = async (req: Request, res: Response) => {
 
 export const fetchFullBootstrapPayload = async () => {
     const now = new Date();
-    const [events, clubs, categories, metricsRecord, clubCount, eventCount] = await Promise.all([
+    const [events, clubs, categories, metricsRecord, clubCount] = await Promise.all([
         prisma.event.findMany({ include: { club: true }, orderBy: { date: 'asc' } }),
         prisma.club.findMany({ orderBy: { name: 'asc' } }),
         prisma.category.findMany({ orderBy: { name: 'asc' } }),
         prisma.metrics.findFirst(),
         prisma.club.count(),
-        prisma.event.count({
-            where: {
-                OR: [{ date: { gte: now } }, { endDate: { gte: now } }]
-            }
-        })
     ]);
+
+    // Reuse the already-fetched rows instead of a second query
+    const eventCount = countDistinctSeries(
+        events.filter(e => new Date(e.date) >= now || (e.endDate && new Date(e.endDate) >= now))
+    );
 
     return {
         events,

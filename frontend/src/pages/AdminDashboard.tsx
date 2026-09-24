@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Calendar as CalIcon, LogOut, Trash2, Edit3, X, Users, Tag, ImagePlus, Loader2, Star } from 'lucide-react';
+import { PlusCircle, Calendar as CalIcon, LogOut, Trash2, Edit3, X, Users, Tag, ImagePlus, Loader2, Star, AlertTriangle } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { Helmet } from 'react-helmet-async';
 import getCroppedImg from '../utils/cropImage';
@@ -11,7 +11,7 @@ import { useAppData } from '../context/DataContext';
 import type { ClubItem } from '../context/DataContext';
 import { filterRecurringEvents } from '../utils/recurringUtils';
 import { DescriptionEditor } from '../components/common/DescriptionEditor';
-import { OBSERVANCE_TAG, NO_SCHOOL_TAG, MARKER_TAGS, formatEventTime, getTagPillColor } from '../utils/timeUtils';
+import { OBSERVANCE_TAG, NO_SCHOOL_TAG, MARKER_TAGS, formatEventTime, getTagPillColor, toSchoolTime, fromSchoolTime, isUnrecognizedTimeZone, isAllDayEvent, endOfSchoolDay } from '../utils/timeUtils';
 
 type Club = ClubItem;
 
@@ -99,19 +99,19 @@ export const AdminDashboard = () => {
             const targetEndDate = endDate || date;
 
             if (scheduleMode === 'timed') {
-                dt = new Date(`${date}T${time}:00`);
+                dt = fromSchoolTime(`${date}T${time}:00`);
                 if (hasEndDate) {
                     endDt = hasEndTime && endTime
-                        ? new Date(`${targetEndDate}T${endTime}:00`)
-                        : new Date(`${targetEndDate}T23:59:59`);
+                        ? fromSchoolTime(`${targetEndDate}T${endTime}:00`)
+                        : fromSchoolTime(`${targetEndDate}T23:59:59`);
                 }
             } else if (scheduleMode === 'allDay') {
-                dt = new Date(`${date}T08:00:00`);
-                endDt = new Date(`${targetEndDate}T17:00:00`);
+                dt = fromSchoolTime(`${date}T08:00:00`);
+                endDt = fromSchoolTime(`${targetEndDate}T17:00:00`);
             } else {
-                dt = new Date(`${date}T00:00:00`);
+                dt = fromSchoolTime(`${date}T00:00:00`);
                 if (hasEndDate) {
-                    endDt = new Date(`${targetEndDate}T23:59:59`);
+                    endDt = fromSchoolTime(`${targetEndDate}T23:59:59`);
                 }
             }
 
@@ -137,7 +137,7 @@ export const AdminDashboard = () => {
                     title, 
                     date: dt.toISOString(), 
                     endDate: endDt?.toISOString() || null, 
-                    recurrenceEndDate: recurrenceEndDate ? new Date(`${recurrenceEndDate}T23:59:59`).toISOString() : null,
+                    recurrenceEndDate: recurrenceEndDate ? fromSchoolTime(`${recurrenceEndDate}T23:59:59`).toISOString() : null,
                     description: description || null, 
                     clubId: clubId || null, 
                     recurring: recurring || null, 
@@ -274,7 +274,7 @@ export const AdminDashboard = () => {
         setRecurring(event.recurring || '');
         setEventTags(event.tags || []);
 
-        const d = new Date(event.date);
+        const d = toSchoolTime(event.date);
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
@@ -283,7 +283,7 @@ export const AdminDashboard = () => {
 
         const hours = d.getHours();
         const minutes = d.getMinutes();
-        const ed = event.endDate ? new Date(event.endDate) : null;
+        const ed = event.endDate ? toSchoolTime(event.endDate) : null;
 
         let detectedMode: ScheduleMode;
         if (hours === 0 && minutes === 0) {
@@ -306,7 +306,7 @@ export const AdminDashboard = () => {
 
             const lastInSeries = seriesEvents[seriesEvents.length - 1];
             if (lastInSeries && seriesEvents.length > 1) {
-                const ld = new Date(lastInSeries.date);
+                const ld = toSchoolTime(lastInSeries.date);
                 setRecurrenceEndDate(`${ld.getFullYear()}-${String(ld.getMonth() + 1).padStart(2, '0')}-${String(ld.getDate()).padStart(2, '0')}`);
             } else {
                 setRecurrenceEndDate('');
@@ -499,6 +499,23 @@ export const AdminDashboard = () => {
                 </button>
             </div>
 
+            {isUnrecognizedTimeZone() && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: 'var(--radius-md)',
+                    padding: '12px 16px', marginBottom: '20px', color: '#92400E',
+                    fontSize: '0.85rem', fontWeight: 600,
+                }}>
+                    <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+                    <span>
+                        Your browser doesn't recognize this device's timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}).
+                        This calendar always displays Burnaby school time, so events are unaffected — but other
+                        apps may show wrong times until your browser/OS updates (BC moved to year-round
+                        "Pacific Time", UTC−7).
+                    </span>
+                </div>
+            )}
+
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '6px', marginBottom: '28px', background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: 'var(--radius-pill)', padding: '6px', width: 'fit-content' }}>
                 <button onClick={() => setTab('events')} style={tabStyle(tab === 'events')}>
@@ -660,6 +677,9 @@ export const AdminDashboard = () => {
                             const end = e.endDate ? new Date(e.endDate) : null;
                             if (end) {
                                 return end >= now;
+                            } else if (isAllDayEvent(start, null)) {
+                                // All-day events stay listed for their entire school-local day
+                                return endOfSchoolDay(start) >= now;
                             } else {
                                 const oneHourLater = new Date(start.getTime() + 60 * 60 * 1000);
                                 return oneHourLater >= now;
@@ -692,7 +712,7 @@ export const AdminDashboard = () => {
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
                                     {upcomingEvents.map((event, idx) => {
-                                        const d = new Date(event.date);
+                                        const d = toSchoolTime(event.date);
                                         const categoryColor = getEventCategoryColor(event);
                                         return (
                                             <div 

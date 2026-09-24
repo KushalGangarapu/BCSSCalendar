@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { X, Edit3, Save } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { useToast } from '../Toast';
 import { invalidateCache } from '../../utils/apiCache';
 import { DescriptionEditor } from '../common/DescriptionEditor';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { OBSERVANCE_TAG, NO_SCHOOL_TAG, MARKER_TAGS } from '../../utils/timeUtils';
+import { OBSERVANCE_TAG, NO_SCHOOL_TAG, MARKER_TAGS, toSchoolTime, fromSchoolTime } from '../../utils/timeUtils';
 
 type ScheduleMode = 'timed' | 'allDay' | 'observance' | 'holiday';
 
@@ -39,6 +39,7 @@ export const EditEventModal = ({
     const [description, setDescription] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [recurring, setRecurring] = useState<string>('');
+    const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
 
     useEffect(() => {
         if (!event) return;
@@ -49,8 +50,8 @@ export const EditEventModal = ({
         setRecurring(event.recurring || '');
         setSelectedTags(event.tags || []);
 
-        const parsedStart = event.date ? (typeof event.date === 'string' ? parseISO(event.date) : new Date(event.date)) : null;
-        const parsedEnd = event.endDate ? (typeof event.endDate === 'string' ? parseISO(event.endDate) : new Date(event.endDate)) : null;
+        const parsedStart = event.date ? toSchoolTime(event.date) : null;
+        const parsedEnd = event.endDate ? toSchoolTime(event.endDate) : null;
 
         const startDayStr = parsedStart ? format(parsedStart, 'yyyy-MM-dd') : '';
         const endDayStr = parsedEnd ? format(parsedEnd, 'yyyy-MM-dd') : '';
@@ -90,6 +91,18 @@ export const EditEventModal = ({
             setHasEndDate(false);
             setEndDateStr('');
         }
+
+        setRecurrenceEndDate('');
+        if (event.recurring && event.id) {
+            fetch(`${import.meta.env.VITE_API_URL}/api/events/${event.id}`)
+                .then(r => (r.ok ? r.json() : null))
+                .then(data => {
+                    if (data?.recurrenceEndDate) {
+                        setRecurrenceEndDate(format(toSchoolTime(data.recurrenceEndDate), 'yyyy-MM-dd'));
+                    }
+                })
+                .catch(() => {});
+        }
     }, [event]);
 
     if (!event) return null;
@@ -119,16 +132,16 @@ export const EditEventModal = ({
             const startIso = scheduleMode === 'timed' ? `${dateStr}T${timeStr}:00`
                 : scheduleMode === 'allDay' ? `${dateStr}T08:00:00`
                 : `${dateStr}T00:00:00`;
-            const startDt = new Date(startIso);
+            const startDt = fromSchoolTime(startIso);
 
             let endDt: Date | null = null;
             if (scheduleMode === 'allDay') {
                 const targetEndDay = (hasEndDate && endDateStr) ? endDateStr : dateStr;
-                endDt = new Date(`${targetEndDay}T17:00:00`);
+                endDt = fromSchoolTime(`${targetEndDay}T17:00:00`);
             } else if (hasEndDate) {
                 const targetEndDay = endDateStr || dateStr;
                 const endIso = scheduleMode === 'timed' ? `${targetEndDay}T${endTimeStr}:00` : `${targetEndDay}T23:59:59`;
-                endDt = new Date(endIso);
+                endDt = fromSchoolTime(endIso);
             }
 
             const finalTags = selectedTags.filter(t => !MARKER_TAGS.includes(t));
@@ -150,6 +163,9 @@ export const EditEventModal = ({
                     title,
                     date: startDt.toISOString(),
                     endDate: endDt ? endDt.toISOString() : null,
+                    recurrenceEndDate: recurring && recurrenceEndDate
+                        ? fromSchoolTime(`${recurrenceEndDate}T23:59:59`).toISOString()
+                        : null,
                     description,
                     clubId: clubId || null,
                     recurring: recurring || null,
@@ -311,6 +327,32 @@ export const EditEventModal = ({
                                         onChange={e => setEndTimeStr(e.target.value)}
                                     />
                                 )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="label">Recurrence</label>
+                        <select
+                            className="input"
+                            value={recurring}
+                            onChange={e => setRecurring(e.target.value)}
+                        >
+                            <option value="">None (One-time)</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="biweekly">Bi-weekly (Every 2 weeks)</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                        {recurring && (
+                            <div style={{ marginTop: '10px' }}>
+                                <label className="label">Repeat Until Date (Recurrence End Date)</label>
+                                <input
+                                    type="date"
+                                    className="input"
+                                    value={recurrenceEndDate}
+                                    min={dateStr || undefined}
+                                    onChange={e => setRecurrenceEndDate(e.target.value)}
+                                />
                             </div>
                         )}
                     </div>

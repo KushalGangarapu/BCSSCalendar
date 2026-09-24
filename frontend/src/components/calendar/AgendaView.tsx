@@ -1,6 +1,6 @@
-import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { Trash2, Clock, Calendar } from 'lucide-react';
-import { formatEventTime } from '../../utils/timeUtils';
+import { formatEventTime, schoolDayKey } from '../../utils/timeUtils';
 
 export const AgendaView = ({
     events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle
@@ -9,19 +9,17 @@ export const AgendaView = ({
     const grouped: { [dateStr: string]: any[] } = {};
 
     const sortedEvents = [...events].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
+    const todayStr = schoolDayKey(new Date());
 
     sortedEvents.forEach((ev: any) => {
-        const start = typeof ev.date === 'string' ? parseISO(ev.date) : new Date(ev.date);
-        const dStr = format(start, 'yyyy-MM-dd');
-        if (!grouped[dStr]) grouped[dStr] = [];
-        grouped[dStr].push(ev);
+        const startKey = schoolDayKey(ev.date);
+        if (!grouped[startKey]) grouped[startKey] = [];
+        grouped[startKey].push(ev);
 
         if (ev.endDate) {
-            const end = typeof ev.endDate === 'string' ? parseISO(ev.endDate) : new Date(ev.endDate);
-            if (!isSameDay(start, end)) {
-                if (dStr !== todayStr && startOfDay(today) >= startOfDay(start) && startOfDay(today) <= startOfDay(end)) {
+            const endKey = schoolDayKey(ev.endDate);
+            if (endKey !== startKey) {
+                if (startKey !== todayStr && todayStr >= startKey && todayStr <= endKey) {
                     if (!grouped[todayStr]) grouped[todayStr] = [];
                     if (!grouped[todayStr].some((e: any) => e.id === ev.id)) {
                         grouped[todayStr].push(ev);
@@ -49,7 +47,9 @@ export const AgendaView = ({
                 ) : (
                     dates.map(dateStr => {
                         const dayEvents = grouped[dateStr];
-                        const dateObj = parseISO(dateStr);
+                        // dateStr is a school-local 'yyyy-MM-dd' key; local noon
+                        // keeps the badge inside that day in every timezone
+                        const dateObj = new Date(dateStr + 'T12:00:00');
 
                         return (
                             <div key={dateStr} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>

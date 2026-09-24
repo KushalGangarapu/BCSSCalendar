@@ -1,6 +1,6 @@
-import { format, isSameDay, startOfWeek, endOfWeek, addDays, parseISO } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
 import { Trash2, Clock } from 'lucide-react';
-import { isEventOnDay, formatEventTime } from '../../utils/timeUtils';
+import { isEventOnDay, formatEventTime, schoolDayKey, toSchoolTime } from '../../utils/timeUtils';
 
 export const WeekView = ({
     month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, getEventStyle, isMobile
@@ -19,7 +19,7 @@ export const WeekView = ({
             <div className="calendar-table-wrapper" style={{ overflowX: 'auto' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', borderBottom: '1px solid var(--border)', background: '#F8FAFC', width: '100%' }}>
                     {days.map((day, i) => {
-                        const isToday = isSameDay(day, new Date());
+                        const isToday = format(day, 'yyyy-MM-dd') === schoolDayKey(new Date());
                         return (
                             <div key={i} style={{
                                 textAlign: 'center', padding: isMobile ? '10px 4px' : '14px 8px', borderRight: i < 6 ? '1px solid var(--border)' : 'none', minWidth: 0,
@@ -41,7 +41,7 @@ export const WeekView = ({
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', minHeight: isMobile ? '320px' : '420px', width: '100%' }}>
                     {days.map((day, i) => {
-                        const isToday = isSameDay(day, new Date());
+                        const isToday = format(day, 'yyyy-MM-dd') === schoolDayKey(new Date());
                         const dateMatch = events.filter((ev: any) => isEventOnDay(ev, day));
                         return (
                             <div key={i} style={{
@@ -77,9 +77,9 @@ export const WeekView = ({
                                                     display: 'block', minWidth: 0, flex: 1, color: '#FFFFFF'
                                                 }}>
                                                     {ev.title}
-                                                    {ev.endDate && !isSameDay(typeof ev.date === 'string' ? parseISO(ev.date) : ev.date, typeof ev.endDate === 'string' ? parseISO(ev.endDate) : ev.endDate) && (
+                                                    {ev.endDate && schoolDayKey(ev.date) !== schoolDayKey(ev.endDate) && (
                                                         <span style={{ opacity: 0.9, fontWeight: 600, marginLeft: '4px', fontSize: '0.85em' }}>
-                                                            ({format(typeof ev.date === 'string' ? parseISO(ev.date) : ev.date, 'MMM d')} – {format(typeof ev.endDate === 'string' ? parseISO(ev.endDate) : ev.endDate, 'MMM d')})
+                                                            ({format(toSchoolTime(ev.date), 'MMM d')} – {format(toSchoolTime(ev.endDate), 'MMM d')})
                                                         </span>
                                                     )}
                                                 </span>

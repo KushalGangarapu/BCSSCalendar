@@ -1,6 +1,6 @@
-import { format, isSameMonth, isSameDay, startOfWeek, endOfWeek, endOfMonth, startOfMonth, addDays, parseISO } from 'date-fns';
+import { format, isSameMonth, startOfWeek, endOfWeek, endOfMonth, startOfMonth, addDays } from 'date-fns';
 import { Trash2, Edit3 } from 'lucide-react';
-import { isEventOnDay } from '../../utils/timeUtils';
+import { isEventOnDay, schoolDayKey, toSchoolTime } from '../../utils/timeUtils';
 
 export const MonthView = ({
     month, events, hovered, setHovered, onEventClick, isAdmin, handleDeleteEvent, handleEditEvent, getEventStyle, isMobile
@@ -17,7 +17,7 @@ export const MonthView = ({
         while (day <= end) {
             const d = day;
             const isThisMonth = isSameMonth(d, mStart);
-            const isToday = isSameDay(d, new Date());
+            const isToday = format(d, 'yyyy-MM-dd') === schoolDayKey(new Date());
             const dateMatch = events.filter((ev: any) => isEventOnDay(ev, d));
 
             cells.push(
@@ -93,9 +93,9 @@ export const MonthView = ({
                                         lineHeight: 1.3
                                     }}>
                                         {ev.title}
-                                        {ev.endDate && !isSameDay(typeof ev.date === 'string' ? parseISO(ev.date) : ev.date, typeof ev.endDate === 'string' ? parseISO(ev.endDate) : ev.endDate) && (
+                                        {ev.endDate && schoolDayKey(ev.date) !== schoolDayKey(ev.endDate) && (
                                             <span style={{ opacity: 0.88, fontWeight: 600, marginLeft: '4px', fontSize: '0.9em' }}>
-                                                ({format(typeof ev.date === 'string' ? parseISO(ev.date) : ev.date, 'MMM d')} – {format(typeof ev.endDate === 'string' ? parseISO(ev.endDate) : ev.endDate, 'MMM d')})
+                                                ({format(toSchoolTime(ev.date), 'MMM d')} – {format(toSchoolTime(ev.endDate), 'MMM d')})
                                             </span>
                                         )}
                                     </span>

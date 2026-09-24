@@ -1,5 +1,5 @@
-import { isAllDayEvent } from './timeUtils';
-import { addDays, parseISO } from 'date-fns';
+import { isAllDayEvent, toSchoolTime } from './timeUtils';
+import { addDays, format } from 'date-fns';
 import { MARKDOWN_LINK_REGEX } from './linkUtils';
 
 export interface CalendarEvent {
@@ -24,13 +24,9 @@ const formatToUtcBasic = (dateString: string | Date): string => {
     return `${y}${m}${day}T${h}${min}${s}Z`;
 };
 
-const formatToLocalDateBasic = (dateString: string | Date): string => {
-    const d = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}${m}${day}`;
-};
+// All-day calendar dates are school-local (BC Pacific Time, UTC-7), not viewer-local
+const formatToSchoolDateBasic = (date: string | Date): string =>
+    format(toSchoolTime(date), 'yyyyMMdd');
 
 const getFallbackEndDate = (startDateString: string): string => {
     const d = new Date(startDateString);
@@ -44,13 +40,13 @@ export const generateGoogleCalendarUrl = (event: CalendarEvent, recurrenceEndDat
     let end = '';
 
     if (isAllDay) {
-        const startDate = typeof event.date === 'string' ? parseISO(event.date) : event.date;
-        start = formatToLocalDateBasic(startDate);
+        const startDate = toSchoolTime(event.date);
+        start = format(startDate, 'yyyyMMdd');
         if (event.endDate) {
-            const endDate = typeof event.endDate === 'string' ? parseISO(event.endDate) : event.endDate;
-            end = formatToLocalDateBasic(addDays(endDate, 1));
+            // Exclusive end = the school-local day after the last day
+            end = format(addDays(toSchoolTime(event.endDate), 1), 'yyyyMMdd');
         } else {
-            end = formatToLocalDateBasic(addDays(startDate, 1));
+            end = format(addDays(startDate, 1), 'yyyyMMdd');
         }
     } else {
         start = formatToUtcBasic(event.date);
@@ -83,7 +79,7 @@ export const generateGoogleCalendarUrl = (event: CalendarEvent, recurrenceEndDat
         const recurrenceEnd = recurrenceEndDateOverride || event.recurrenceEndDate;
         let untilStr = '';
         if (recurrenceEnd) {
-            untilStr = `;UNTIL=${isAllDay ? formatToLocalDateBasic(recurrenceEnd) : formatToUtcBasic(recurrenceEnd)}`;
+            untilStr = `;UNTIL=${isAllDay ? formatToSchoolDateBasic(recurrenceEnd) : formatToUtcBasic(recurrenceEnd)}`;
         }
         recurParam = `&recur=${encodeURIComponent(`RRULE:FREQ=${freq}${interval}${untilStr}`)}`;
     }

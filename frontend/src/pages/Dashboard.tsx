@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Eye, Calendar, Users, ArrowRight, Heart, Star, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { isEventLive, isAllDayEvent, formatEventTime, getTagPillColor } from '../utils/timeUtils';
-import { endOfDay } from 'date-fns';
+import { isEventLive, isAllDayEvent, formatEventTime, getTagPillColor, endOfSchoolDay, toSchoolTime } from '../utils/timeUtils';
 import { SkeletonClubCard, SkeletonEventItem } from '../components/Skeleton';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -30,8 +29,8 @@ export const Dashboard = () => {
         if (end) {
             return end >= now;
         } else if (isAllDayEvent(start, null)) {
-            // All-day events stay "upcoming" for their entire day
-            return endOfDay(start) >= now;
+            // All-day events stay "upcoming" for their entire school-local day
+            return endOfSchoolDay(start) >= now;
         } else {
             const oneHourLater = new Date(start.getTime() + 60 * 60 * 1000);
             return oneHourLater >= now;
@@ -149,7 +148,7 @@ export const Dashboard = () => {
 
                             <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                                 <Clock size={16} style={{ color: 'var(--bcss-red)' }} />
-                                {`${new Date(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${formatEventTime(nextLiveEvent.date, nextLiveEvent.endDate, nextLiveEvent.tags)}`}
+                                {`${toSchoolTime(nextLiveEvent.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${formatEventTime(nextLiveEvent.date, nextLiveEvent.endDate, nextLiveEvent.tags)}`}
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
@@ -301,7 +300,7 @@ export const Dashboard = () => {
                         ) : displayEvents.length > 0 ? (
                             displayEvents.map((event, idx) => {
                                 const isLive = isEventLive(event.date, event.endDate);
-                                const d = new Date(event.date);
+                                const d = toSchoolTime(event.date);
                                 const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
                                 const day = d.getDate();
                                 const categoryColor = getEventCategoryColor(event);

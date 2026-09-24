@@ -1,6 +1,6 @@
-import { format, isSameDay } from 'date-fns';
+import { format } from 'date-fns';
 import { Trash2, Clock } from 'lucide-react';
-import { isEventOnDay, formatEventTime } from '../../utils/timeUtils';
+import { isEventOnDay, formatEventTime, schoolDayKey } from '../../utils/timeUtils';
 import { RichDescription } from '../common/RichDescription';
 
 export const DayView = ({
@@ -18,7 +18,7 @@ export const DayView = ({
                 <div style={{
                     width: '48px', height: '48px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     borderRadius: '50%', fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)',
-                    ...(isSameDay(selectedDay, new Date()) ? { background: 'var(--bcss-red)', color: '#fff', boxShadow: '0 4px 14px rgba(217,4,41,0.35)' } : { color: 'var(--text-main)', background: '#FFFFFF', border: '1px solid var(--border)' }),
+                    ...(format(selectedDay, 'yyyy-MM-dd') === schoolDayKey(new Date()) ? { background: 'var(--bcss-red)', color: '#fff', boxShadow: '0 4px 14px rgba(217,4,41,0.35)' } : { color: 'var(--text-main)', background: '#FFFFFF', border: '1px solid var(--border)' }),
                 }}>
                     {format(selectedDay, 'd')}
                 </div>

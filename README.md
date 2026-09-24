@@ -41,6 +41,13 @@ The system is designed from the ground up to solve a real-world problem: replaci
 * **Smart Relational Updates & Deletion:** When editing or deleting a recurring event, the system prompts the administrator to either modify/delete that specific instance or automatically cascade changes to all future instances in the recurrence series.
 * **Optional Club Association (General School Events):** Events support optional `clubId` fields (`clubId: null`), enabling general school-wide announcements, holidays, and exam schedules to be posted independently without creating artificial club profiles.
 
+### School-Time Anchoring (Timezone-Proof Scheduling)
+* **Single Source of Truth:** Event instants are stored as UTC in PostgreSQL, but every display, grouping, form-parsing, recurrence, and export path interprets them through one canonical school timezone — BC's permanent **Pacific Time (UTC−7)**, implemented as `Etc/GMT+7` in both `timeUtils.ts` and `eventsController.ts`.
+* **Device-Independent Rendering:** Students, parents, and admins see identical school-local dates and times regardless of device timezone settings, VPN usage, travel, or OS-level timezone bugs (e.g. Windows' unmappable "Pacific Time (British Columbia)" zone silently falling back to a fixed UTC−8).
+* **DST-Proof Recurrence:** Occurrence generation and series cascade edits use host-independent wall-clock arithmetic via `date-fns-tz` helpers (`schoolWallMs` / `schoolWallToInstant`), so recurring events hold the same school wall-clock time all year with zero drift.
+* **Staleness-Proof Zone Choice:** `Etc/GMT+7` is a fixed POSIX offset that can never go stale — unlike `America/Vancouver`, which runtimes with outdated tzdata still interpret using obsolete pre-2026 DST rules. (BC adopted permanent UTC−7 on March 8, 2026; no more clock changes.)
+* **Admin Misconfiguration Guard:** The admin dashboard surfaces a warning banner when the device's own timezone is unrecognizable to the browser's ICU — the calendar itself stays correct either way.
+
 ### Real-Time Server-Sent Events (SSE) Sync
 * **Zero-Latency Live Broadcast:** An integrated SSE stream (`GET /api/sync/stream`) broadcasts mutations (created, updated, or deleted events, clubs, categories, and featured status) to connected student clients in real time.
 * **Compression Bypassing:** Express `compression()` middleware is configured to stream raw `text/event-stream` payloads with zero buffering delay.
@@ -62,7 +69,7 @@ The system is designed from the ground up to solve a real-world problem: replaci
 
 ### Real-world Calendar Integrations
 * **Direct Google Calendar App Deep-Linking:** Automatically constructs parameter-mapped Google Calendar creation URLs that leverage App/Universal Links to open the native Google Calendar app directly on mobile devices with pre-filled event details.
-* **Native Apple Calendar Integration:** Implements a custom backend streaming endpoint (`/api/events/:id/ics`) serving raw RFC-5545 iCalendar data inline. On Apple devices (iOS, macOS), browsers intercept this stream to launch the native "Add Event" calendar panel directly within the browser tab.
+* **Native Apple Calendar Integration:** Implements a custom backend streaming endpoint (`/api/events/:id/ics`) serving raw RFC-5545 iCalendar data inline. On Apple devices (iOS, macOS), browsers intercept this stream to launch the native "Add Event" calendar panel directly within the browser tab. All-day events export as floating `VALUE=DATE` properties with type-matched `UNTIL` values, so they land on the correct calendar day on any recipient device.
 
 ### BCSS Branding Design System (Vanilla CSS)
 * **Zero Framework Overhead:** Built entirely with Vanilla CSS (no Tailwind or heavy component libraries), demonstrating clean CSS layout techniques (CSS Grid, Flexbox, custom keyframe transitions, scroll snapping).
@@ -194,7 +201,7 @@ graph TD
 ### Technical Specifications
 * **Frontend Framework:** React 19, TypeScript, Vite
 * **Routing:** React Router DOM v7
-* **Date Library:** `date-fns` & `date-fns-tz` (ensures timezone-agnostic operations, storing all database times in UTC and rendering them in local student timezones)
+* **Date Library:** `date-fns` & `date-fns-tz` (stores all database times as UTC instants and renders them in a pinned school timezone — BC's permanent Pacific Time, UTC−7 — so dates never shift regardless of each viewer's device timezone)
 * **Backend Server:** Node.js, Express (TypeScript), SSE (`text/event-stream`)
 * **Database ORM:** Prisma ORM
 * **Database Engine:** PostgreSQL (Development & Production)
@@ -362,7 +369,7 @@ When deploying to production environments, configure these adjustments to ensure
 
 ## Engineering Trade-offs & Lessons Learned
 * **Vanilla CSS vs. Tailwind:** Chosen to completely eliminate framework overhead and build a deep, first-principles understanding of the CSS box model, grid layouts, and layout reflow performance.
-* **Timezone Complexity:** Managing datetimes across client and server boundaries required implementing strict UTC storage policies via `date-fns-tz` to eliminate systemic timezone drift bugs across client devices.
+* **Timezone Complexity:** Managing datetimes across client and server boundaries required implementing strict UTC storage policies via `date-fns-tz` to eliminate systemic timezone drift bugs across client devices. Two real-world curveballs shaped the final design: Windows' newer "Pacific Time (British Columbia)" zone cannot be mapped by JavaScript engines to an IANA zone (silently falling back to a fixed UTC−8), and BC's March 2026 adoption of permanent UTC−7 left stale tzdata still applying obsolete Vancouver DST rules. Pinning every display, form, recurrence, and export path to the fixed `Etc/GMT+7` offset makes the calendar provably correct on any device, patched or not.
 * **Real-Time SSE vs. Polling:** Replacing periodic polling with Server-Sent Events drastically reduced database query frequency while providing instantaneous sub-second UI updates across connected users.
 
 ---
